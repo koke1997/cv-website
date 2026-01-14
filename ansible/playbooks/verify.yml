@@ -1,0 +1,88 @@
+---
+- name: Verify CV Site Server
+  hosts: local
+  gather_facts: false
+  vars:
+    serve_host: "127.0.0.1"
+    serve_port: 8080
+    pid_file: "/tmp/mkdocs_cv.pid"
+    log_file: "/tmp/mkdocs_cv.log"
+
+  tasks:
+    - name: Check if port is listening
+      ansible.builtin.wait_for:
+        host: "{{ serve_host }}"
+        port: "{{ serve_port }}"
+        state: started
+        timeout: 3
+      register: port_status
+      failed_when: false
+
+    - name: Get HTTP response
+      ansible.builtin.uri:
+        url: "http://{{ serve_host }}:{{ serve_port }}/"
+        return_content: true
+        status_code: 200
+      register: http_response
+      when: port_status is succeeded
+      failed_when: false
+
+    - name: Check for CV content in response
+      ansible.builtin.set_fact:
+        content_found: "{{ 'Ivan Kokalović' in http_response.content }}"
+      when:
+        - port_status is succeeded
+        - http_response is succeeded
+
+    - name: Get process listening on port
+      ansible.builtin.command:
+        cmd: "lsof -i :{{ serve_port }}"
+      register: lsof_output
+      when: port_status is succeeded
+      failed_when: false
+      changed_when: false
+
+    - name: Read log file
+      ansible.builtin.slurp:
+        src: "{{ log_file }}"
+      register: log_content
+      failed_when: false
+
+    - name: Display verification results
+      ansible.builtin.debug:
+        msg:
+          - "========================================="
+          - "Server Verification Results"
+          - "========================================="
+          - "Port {{ serve_port }} Status: {{ 'LISTENING ✅' if port_status is succeeded else 'NOT LISTENING ❌' }}"
+          - "HTTP Response: {{ 'OK (200) ✅' if http_response is succeeded else 'FAILED ❌' }}"
+          - "CV Content Found: {{ 'YES ✅' if content_found | default(false) else 'NO ❌' }}"
+          - ""
+          - "URL: http://{{ serve_host }}:{{ serve_port }}/"
+          - "Log File: {{ log_file }}"
+          - "========================================="
+
+    - name: Display process info
+      ansible.builtin.debug:
+        var: lsof_output.stdout_lines
+      when:
+        - port_status is succeeded
+        - lsof_output is succeeded
+
+    - name: Display last 10 lines of log
+      ansible.builtin.debug:
+        msg: "{{ (log_content.content | b64decode).split('\n')[-11:-1] }}"
+      when: log_content is succeeded
+
+    - name: Final verdict
+      ansible.builtin.debug:
+        msg: "🎉 Server is running correctly! Open http://{{ serve_host }}:{{ serve_port }}/ in your browser."
+      when:
+        - port_status is succeeded
+        - http_response is succeeded
+        - content_found | default(false)
+
+    - name: Failure message
+      ansible.builtin.fail:
+        msg: "❌ Server is not running correctly. Check the output above."
+      when: port_status is failed or http_response is failed or not (content_found | default(false))

@@ -1,0 +1,180 @@
+cv:
+  name: Ivan Kokalović
+  location: Bremen, Germany
+  email: ivankokalovic@protonmail.ch
+  website: https://github.com/koke1997
+  social_networks:
+    - network: LinkedIn
+      username: kokalovic
+    - network: GitHub
+      username: koke1997
+  
+  summary: |
+    Backend Developer and Technical Problem Solver with expertise in infrastructure management, IAM, and backend development. Experienced in Terragrunt, Java, Terraform, and Docker, with a strong background in technical support, fraud prevention, and system monitoring. Currently finishing Information Technology degree at University of Mostar, focusing on databases, data science, and financial analysis. Passionate about learning new technologies, AI, and solving complex technical challenges.
+
+  sections:
+    Experience:
+      - company: Research Industrial Systems Engineering (RISE)
+        position: Backend Developer
+        location: Leipzig, Saxony, Germany
+        start_date: 2025-06
+        end_date: present
+        highlights:
+          - Manage infrastructure, IAM, and backend development using Terragrunt, Java, Terraform, and Docker
+          - Build proof of concepts for new initiatives
+          - Work on infrastructure automation and deployment pipelines
+      
+      - company: IDnow
+        position: Technical Services Engineer
+        location: Munich, Bavaria, Germany
+        start_date: 2022-08
+        end_date: 2025-06
+        highlights:
+          - Managed Jira boards for technical issues within SLA-based priority system
+          - Performed Level 3 engineering tasks and provided pre- and post-sales technical support
+          - Maintained and developed OCR engines, delivered RCA statements for stakeholders
+          - Supported clients with SDK installations for Android and iOS platforms
+          - Wrote lambda functions for internal configuration system and fixed HOCON (Java) syntax errors
+          - Monitored and investigated errors using Graylog, Docker logs, and Grafana
+          - Developed internal scripts in Bash, Python, and PowerShell
+          - Created MySQL query templates and managed multiple Jira boards
+          - Coordinated technical feature requests and participated in customer escalation meetings
+      
+      - company: IDnow
+        position: Fraud Prevention Specialist
+        location: Leipzig, Saxony, Germany
+        start_date: 2021-10
+        end_date: 2022-08
+        highlights:
+          - Created real-time dashboard for fraud cases with data from multiple sources
+          - Set up OCR Tesseract for big data analysis
+          - Trained new members during onboarding phase
+          - Worked with security print experts from Interpol and Gemalto
+          - Prepared training materials for Fraud Prevention Specialists
+          - Participated in team that introduced internal AML system
+          - Served as technical contact point and conducted quarterly fraud analyses
+      
+      - company: IDnow
+        position: Ident Specialist
+        location: Leipzig, Saxony, Germany
+        start_date: 2021-03
+        end_date: 2021-09
+        highlights:
+          - Handled inbound requests and guided customers through identification process
+          - Performed manual reviews and managed night shifts with on-duty calls
+          - Reviewed and analyzed customer data to ensure compliance with requirements
+          - Collaborated with technical support team to resolve issues promptly
+          - Handled sensitive information with high level of discretion and professionalism
+      
+      - company: In Voice d.o.o.
+        position: Chief Executive Officer and Founder
+        location: Mostar, Bosnia and Herzegovina
+        start_date: 2019-03
+        end_date: 2020-06
+        highlights:
+          - Founded IT and marketing solutions company with initial capital of €500
+          - Registered company in Mostar under MBS number 58-01-0029-19
+          - Established employee-owned company structure outlined in internal statute
+          - Cultivated exceptional talent from within rather than external hiring
+          - Built teams that continue to thrive and make impact
+      
+      - company: Media One
+        position: Information Technology Consultant
+        location: Mostar, Bosnia and Herzegovina
+        start_date: 2018-08
+        end_date: 2019-03
+        highlights:
+          - Provided consulting and maintenance for VoIP systems
+          - Optimized hardware costs by leveraging optical fiber networks
+          - Built sales CRM using Google Apps with JSON, JavaScript, Python, C++, SQL
+          - Developed scalable invoice factoring system and automation scripts
+          - Secured investments from Berlin and Zagreb
+          - Built custom OCR endpoint with Beowulf cluster for invoice processing
+          - Developed custom dictionary for OCR engine and assembled distributed system from multiple machines
+
+    Education:
+      - institution: University of Mostar
+        area: Information Technology
+        degree: Bachelor's degree (In Progress)
+        start_date: 2018
+        end_date: 2019
+        highlights:
+          - Focus on databases, data science, and financial analysis
+
+    Skills:
+      - label: Backend & Infrastructure
+        details: Java, Terragrunt, Terraform, Docker, REST APIs
+      - label: Programming Languages
+        details: Python, Bash, PowerShell, JavaScript, C++, SQL
+      - label: DevOps & Monitoring
+        details: Graylog, Grafana, Docker, Linux, SoftEther
+      - label: Technologies & Tools
+        details: Jira, Confluence, MySQL, OCR (Tesseract), Lambda Functions, HOCON
+      - label: Systems & Methodologies
+        details: IAM, SLA Management, AML Systems, Fraud Prevention, Technical Support
+      - label: Soft Skills
+        details: Creative Problem Solving, Project Management, Technical Documentation
+    
+    Certifications:
+      - label: Python Essential Training
+        details: LinkedIn Learning
+      - label: Reactive Architecture - Introduction to Reactive Systems
+        details: ""
+      - label: OpenEDG Python Institute - Programming with Python
+        details: Professional Certificate
+      - label: Java Foundations by JetBrains
+        details: Professional Certificate
+      - label: Jira Fundamentals Badge
+        details: Atlassian
+    
+    "Languages Spoken":
+      - label: Languages
+        details: German (Native), English (Native), Croatian (Native), Serbian (Native), Slovenian (Limited), Spanish (Elementary)
+
+design:
+  theme: sb2nov
+
+locale_catalog:
+  phone_number_format: national
+  date_style: "MONTH_ABBREVIATION YEAR"
+  abbreviations_for_months:
+    - Jan
+    - Feb
+    - Mar
+    - Apr
+    - May
+    - Jun
+    - Jul
+    - Aug
+    - Sep
+    - Oct
+    - Nov
+    - Dec
+  full_names_of_months:
+    - January
+    - February
+    - March
+    - April
+    - May
+    - June
+    - July
+    - August
+    - September
+    - October
+    - November
+    - December
+  month: month
+  months: months
+  year: year
+  years: years
+  present: present
+  to: –
+
+rendercv_settings:
+  render_command:
+    output_folder_name: rendercv_output
+    pdf_path: null
+    png_path: null
+    html_path: null
+    dont_generate_png: false
+    dont_generate_html: false

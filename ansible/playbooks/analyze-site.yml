@@ -1,0 +1,176 @@
+---
+- name: Analyze CV Site for Improvements
+  hosts: local
+  gather_facts: no
+  vars:
+    project_dir: "/Users/ivankokalovic/Documents/GitHub/Lebenslauf"
+    docs_dir: "{{ project_dir }}/docs"
+  
+  tasks:
+    - name: Check all content files
+      ansible.builtin.find:
+        paths: "{{ docs_dir }}"
+        patterns: "*.md"
+      register: md_files
+    
+    - name: List all markdown files
+      ansible.builtin.debug:
+        msg: "Found {{ md_files.files | length }} markdown files"
+    
+    - name: Check for profile image
+      ansible.builtin.stat:
+        path: "{{ docs_dir }}/assets/images/profile.jpg"
+      register: profile_img
+    
+    - name: Check image file size
+      ansible.builtin.shell:
+        cmd: "ls -lh {{ docs_dir }}/assets/images/profile.jpg | awk '{print $5}'"
+      register: img_size
+      when: profile_img.stat.exists
+    
+    - name: Check CSS file
+      ansible.builtin.stat:
+        path: "{{ docs_dir }}/stylesheets/extra.css"
+      register: css_file
+    
+    - name: Count CSS lines
+      ansible.builtin.shell:
+        cmd: "wc -l {{ docs_dir }}/stylesheets/extra.css | awk '{print $1}'"
+      register: css_lines
+      when: css_file.stat.exists
+    
+    - name: Check JavaScript
+      ansible.builtin.stat:
+        path: "{{ docs_dir }}/javascripts/contact-form.js"
+      register: js_file
+    
+    - name: Check mkdocs config
+      ansible.builtin.shell:
+        cmd: "cat {{ project_dir }}/mkdocs.yml | grep -A5 'nav:'"
+      register: nav_config
+    
+    - name: Check for missing features
+      ansible.builtin.shell:
+        cmd: |
+          echo "Checking site completeness..."
+          
+          # Check if PDF exists
+          if [ -f "{{ docs_dir }}/Ivan_Kokalović_CV.pdf" ]; then
+            echo "✅ PDF exists"
+          else
+            echo "❌ PDF missing"
+          fi
+          
+          # Check for docx
+          if [ -f "{{ docs_dir }}/Ivan_Kokalović_CV.docx" ]; then
+            echo "✅ DOCX exists"
+          else
+            echo "⚠️  DOCX missing (optional)"
+          fi
+          
+          # Check for ODT
+          if [ -f "{{ docs_dir }}/Ivan_Kokalović_CV.odt" ]; then
+            echo "✅ ODT exists"
+          else
+            echo "⚠️  ODT missing (optional)"
+          fi
+          
+          # Check for favicon
+          if [ -f "{{ docs_dir }}/assets/images/favicon.ico" ] || [ -f "{{ docs_dir }}/assets/images/favicon.png" ]; then
+            echo "✅ Favicon exists"
+          else
+            echo "⚠️  Favicon missing"
+          fi
+          
+          # Check for GitHub repo initialization
+          if [ -d "{{ project_dir }}/.git" ]; then
+            echo "✅ Git initialized"
+          else
+            echo "❌ Git not initialized"
+          fi
+      register: features_check
+    
+    - name: Analyze CV YAML content
+      ansible.builtin.shell:
+        cmd: |
+          echo "=== CV Content Analysis ==="
+          echo "Experience entries: $(grep -c 'company:' {{ project_dir }}/Ivan_Kokalovic_CV.yaml)"
+          echo "Skills sections: $(grep -c 'label:' {{ project_dir }}/Ivan_Kokalovic_CV.yaml)"
+          echo "Certifications: $(grep -A20 'Certifications:' {{ project_dir }}/Ivan_Kokalovic_CV.yaml | grep -c 'label:')"
+      register: cv_analysis
+    
+    - name: Display comprehensive analysis
+      ansible.builtin.debug:
+        msg:
+          - "========================================="
+          - "CV SITE ANALYSIS"
+          - "========================================="
+          - ""
+          - "📁 CONTENT FILES:"
+          - "  Markdown files: {{ md_files.files | length }}"
+          - "  Profile image: {{ 'EXISTS (' + img_size.stdout + ')' if profile_img.stat.exists else 'MISSING ❌' }}"
+          - "  CSS file: {{ 'EXISTS (' + css_lines.stdout + ' lines)' if css_file.stat.exists else 'MISSING ❌' }}"
+          - "  JavaScript: {{ 'EXISTS ✅' if js_file.stat.exists else 'MISSING ❌' }}"
+          - ""
+          - "📋 FEATURES:"
+          - "{{ features_check.stdout_lines }}"
+          - ""
+          - "📊 CV DATA:"
+          - "{{ cv_analysis.stdout_lines }}"
+          - ""
+          - "🔍 NAVIGATION:"
+          - "{{ nav_config.stdout_lines }}"
+          - ""
+          - "========================================="
+    
+    - name: Generate improvement recommendations
+      ansible.builtin.debug:
+        msg:
+          - "========================================="
+          - "RECOMMENDED IMPROVEMENTS"
+          - "========================================="
+          - ""
+          - "🎨 DESIGN & UX:"
+          - "  1. Add favicon for browser tab branding"
+          - "  2. Add meta tags for SEO (Open Graph, Twitter Cards)"
+          - "  3. Add structured data (JSON-LD) for search engines"
+          - "  4. Add animations/transitions for better UX"
+          - "  5. Add a projects/portfolio section"
+          - "  6. Add testimonials/recommendations section"
+          - ""
+          - "📄 CONTENT:"
+          - "  1. Generate DOCX format from PDF"
+          - "  2. Generate ODT format from PDF"
+          - "  3. Add blog/articles section"
+          - "  4. Add case studies of projects"
+          - "  5. Add detailed technology stack page"
+          - ""
+          - "🔧 FUNCTIONALITY:"
+          - "  1. Add print stylesheet for better PDF printing"
+          - "  2. Add dark/light theme toggle persistence"
+          - "  3. Add language switcher (DE/EN)"
+          - "  4. Add analytics (privacy-friendly)"
+          - "  5. Add RSS feed for updates"
+          - "  6. Add sitemap.xml for SEO"
+          - ""
+          - "🚀 DEPLOYMENT:"
+          - "  1. Initialize Git repository"
+          - "  2. Push to GitHub"
+          - "  3. Enable GitHub Pages"
+          - "  4. Set up custom domain (optional)"
+          - "  5. Add SSL certificate"
+          - "  6. Set up automated backups"
+          - ""
+          - "📱 RESPONSIVE:"
+          - "  1. Test on mobile devices"
+          - "  2. Optimize images for web"
+          - "  3. Add PWA manifest for mobile install"
+          - "  4. Optimize loading speed"
+          - ""
+          - "♿ ACCESSIBILITY:"
+          - "  1. Add ARIA labels"
+          - "  2. Test with screen readers"
+          - "  3. Ensure keyboard navigation works"
+          - "  4. Check color contrast ratios"
+          - ""
+          - "========================================="

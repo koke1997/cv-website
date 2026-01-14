@@ -1,0 +1,100 @@
+site_name: Ivan Kokalović - CV
+site_description: Professional CV and Portfolio of Ivan Kokalović
+site_author: Ivan Kokalović
+site_url: https://koke1997.github.io/cv/
+use_directory_urls: true
+
+theme:
+  name: material
+  palette:
+    # Light mode
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: blue
+      accent: indigo
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    # Dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: blue
+      accent: indigo
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  
+  features:
+    - navigation.instant
+    - navigation.tracking
+    - navigation.tabs
+    - navigation.sections
+    - navigation.expand
+    - navigation.top
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+    - content.code.annotate
+  
+  font:
+    text: Roboto
+    code: Roboto Mono
+  
+  icon:
+    repo: fontawesome/brands/github
+
+repo_url: https://github.com/koke1997
+repo_name: koke1997
+
+nav:
+  - Home: index.md
+  - CV: cv.md
+  - Download PDF: download.md
+  - Contact: contact.md
+
+markdown_extensions:
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.superfences
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.critic
+  - pymdownx.caret
+  - pymdownx.keys
+  - pymdownx.mark
+  - pymdownx.tilde
+  - attr_list
+  - md_in_html
+  - admonition
+  - pymdownx.details
+  - pymdownx.tabbed:
+      alternate_style: true
+  - tables
+  - footnotes
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+
+plugins:
+  - search
+  - tags
+
+extra:
+  social:
+    - icon: fontawesome/brands/linkedin
+      link: https://www.linkedin.com/in/kokalovic/
+      name: LinkedIn Profile
+    - icon: fontawesome/brands/github
+      link: https://github.com/koke1997
+      name: GitHub Profile
+    - icon: fontawesome/solid/envelope
+      link: mailto:ivankokalovic@protonmail.ch
+      name: Email
+
+extra_css:
+  - stylesheets/extra.css
+
+extra_javascript:
+  - javascripts/contact-form.js
+
+copyright: Copyright &copy; 2026 Ivan Kokalović

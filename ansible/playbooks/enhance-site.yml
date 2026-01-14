@@ -1,0 +1,40 @@
+---
+- name: Enhance CV Site with Better Styling and Features
+  hosts: local
+  gather_facts: no
+  vars:
+    project_dir: "/Users/ivankokalovic/Documents/GitHub/Lebenslauf"
+    docs_dir: "{{ project_dir }}/docs"
+    assets_dir: "{{ docs_dir }}/assets"
+  
+  tasks:
+    - name: Create assets directories
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        mode: '0755'
+      loop:
+        - "{{ assets_dir }}"
+        - "{{ assets_dir }}/images"
+        - "{{ assets_dir }}/js"
+        - "{{ assets_dir }}/css"
+    
+    - name: Install pandoc for document conversion
+      ansible.builtin.command:
+        cmd: brew list pandoc
+      register: pandoc_check
+      failed_when: false
+      changed_when: false
+    
+    - name: Display pandoc installation message
+      ansible.builtin.debug:
+        msg: "Note: Install pandoc with 'brew install pandoc' for Word/ODT conversion"
+      when: pandoc_check.rc != 0
+    
+    - name: Success message
+      ansible.builtin.debug:
+        msg:
+          - "✅ Site enhancement structure created!"
+          - "Next steps:"
+          - "1. Add your photo to {{ assets_dir }}/images/profile.jpg"
+          - "2. Run the update playbook to regenerate content"

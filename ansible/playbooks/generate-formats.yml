@@ -1,0 +1,59 @@
+---
+- name: Generate CV in DOCX and ODT Formats
+  hosts: local
+  gather_facts: false
+  vars:
+    project_dir: "/Users/ivankokalovic/Documents/GitHub/Lebenslauf"
+    source_md: "{{ project_dir }}/rendercv_output/Ivan_Kokalović_CV.md"
+    docs_dir: "{{ project_dir }}/docs"
+    cv_name: "Ivan_Kokalović_CV"
+
+  tasks:
+    - name: Check if source markdown exists
+      ansible.builtin.stat:
+        path: "{{ source_md }}"
+      register: source_file
+
+    - name: Fail if source file missing
+      ansible.builtin.fail:
+        msg: "Source markdown file not found: {{ source_md }}"
+      when: not source_file.stat.exists
+
+    - name: Check pandoc is installed
+      ansible.builtin.command:
+        cmd: "which pandoc"
+      register: pandoc_check
+      failed_when: false
+      changed_when: false
+
+    - name: Fail if pandoc not installed
+      ansible.builtin.fail:
+        msg: "pandoc is not installed. Install with: brew install pandoc"
+      when: pandoc_check.rc != 0
+
+    - name: Generate DOCX format
+      ansible.builtin.command:
+        cmd: "pandoc {{ source_md }} -o {{ docs_dir }}/{{ cv_name }}.docx"
+      changed_when: true
+
+    - name: Generate ODT format
+      ansible.builtin.command:
+        cmd: "pandoc {{ source_md }} -o {{ docs_dir }}/{{ cv_name }}.odt"
+      changed_when: true
+
+    - name: Verify DOCX was created
+      ansible.builtin.stat:
+        path: "{{ docs_dir }}/{{ cv_name }}.docx"
+      register: docx_file
+
+    - name: Verify ODT was created
+      ansible.builtin.stat:
+        path: "{{ docs_dir }}/{{ cv_name }}.odt"
+      register: odt_file
+
+    - name: Success message
+      ansible.builtin.debug:
+        msg:
+          - "CV formats generated successfully!"
+          - "DOCX: {{ docs_dir }}/{{ cv_name }}.docx ({{ docx_file.stat.size | default(0) }} bytes)"
+          - "ODT: {{ docs_dir }}/{{ cv_name }}.odt ({{ odt_file.stat.size | default(0) }} bytes)"

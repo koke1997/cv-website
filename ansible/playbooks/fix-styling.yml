@@ -1,0 +1,48 @@
+---
+- name: Fix CV Site Styling and Images
+  hosts: local
+  gather_facts: no
+  vars:
+    project_dir: "/Users/ivankokalovic/Documents/GitHub/Lebenslauf"
+    docs_dir: "{{ project_dir }}/docs"
+  
+  tasks:
+    - name: Check current CSS file
+      ansible.builtin.stat:
+        path: "{{ docs_dir }}/stylesheets/extra.css"
+      register: css_file
+    
+    - name: Check if CSS is being loaded in mkdocs.yml
+      ansible.builtin.shell:
+        cmd: "grep -A2 'extra_css' {{ project_dir }}/mkdocs.yml"
+      register: css_config
+      failed_when: false
+    
+    - name: Display CSS configuration
+      ansible.builtin.debug:
+        msg:
+          - "CSS file exists: {{ css_file.stat.exists }}"
+          - "CSS config in mkdocs.yml:"
+          - "{{ css_config.stdout_lines }}"
+    
+    - name: Check if image path is correct in index.md
+      ansible.builtin.shell:
+        cmd: "grep -n 'profile' {{ docs_dir }}/index.md | head -5"
+      register: image_refs
+    
+    - name: Display image references
+      ansible.builtin.debug:
+        var: image_refs.stdout_lines
+    
+    - name: Verify image exists in both locations
+      ansible.builtin.stat:
+        path: "{{ item }}"
+      loop:
+        - "{{ docs_dir }}/assets/images/profile.jpg"
+        - "{{ project_dir }}/site/assets/images/profile.jpg"
+      register: image_locations
+    
+    - name: Display image status
+      ansible.builtin.debug:
+        msg: "{{ item.item }}: {{ 'EXISTS ✅' if item.stat.exists else 'MISSING ❌' }}"
+      loop: "{{ image_locations.results }}"

@@ -1,0 +1,47 @@
+# Python virtual environment
+venv/
+env/
+ENV/
+.venv/
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# MkDocs
+site/
+.cache/
+
+# RenderCV output (will be regenerated)
+rendercv_output/
+
+# OS files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Temporary files
+*.tmp
+*.bak
+*.log
+# Development files
+ANALYSIS_SUMMARY.md
+CLAUDE_HANDOFF.md
+IMPROVEMENTS.md
+CV_LinkedIn.pdf
+SETUP.md
+CLAUDE.md

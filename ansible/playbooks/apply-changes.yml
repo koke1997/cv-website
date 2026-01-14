@@ -1,0 +1,34 @@
+---
+- name: Apply Changes to Running Site
+  hosts: local
+  gather_facts: no
+  vars:
+    project_dir: "/Users/ivankokalovic/Documents/GitHub/Lebenslauf"
+    venv_dir: "{{ project_dir }}/venv"
+  
+  tasks:
+    - name: Rebuild site with changes
+      ansible.builtin.shell:
+        cmd: |
+          source {{ venv_dir }}/bin/activate
+          mkdocs build --clean
+        chdir: "{{ project_dir }}"
+      register: build_output
+    
+    - name: Display build result
+      ansible.builtin.debug:
+        msg: "✅ Site rebuilt successfully with your changes!"
+    
+    - name: Check if server is running
+      ansible.builtin.wait_for:
+        port: 8080
+        state: started
+        timeout: 2
+      register: server_running
+      ignore_errors: yes
+    
+    - name: Notify to refresh browser
+      ansible.builtin.debug:
+        msg:
+          - "✅ Changes applied!"
+          - "{{ 'Server is running - refresh your browser (Cmd+Shift+R)' if server_running is succeeded else 'Start server with: ansible-playbook -i ansible/inventory/hosts ansible/playbooks/serve.yml' }}"

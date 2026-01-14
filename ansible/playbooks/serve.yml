@@ -1,0 +1,67 @@
+---
+- name: Serve CV Site Locally
+  hosts: local
+  gather_facts: false
+  vars:
+    project_dir: "/Users/ivankokalovic/Documents/GitHub/Lebenslauf"
+    venv_dir: "{{ project_dir }}/venv"
+    serve_host: "127.0.0.1"
+    serve_port: 8080
+    log_file: "/tmp/mkdocs_cv.log"
+    pid_file: "/tmp/mkdocs_cv.pid"
+
+  tasks:
+    - name: Check if MkDocs is already running
+      ansible.builtin.command:
+        cmd: "lsof -ti:{{ serve_port }}"
+      register: port_check
+      failed_when: false
+      changed_when: false
+
+    - name: Stop existing MkDocs server if running
+      ansible.builtin.command:
+        cmd: "kill {{ port_check.stdout }}"
+      when: port_check.stdout != ""
+      failed_when: false
+      changed_when: true
+
+    - name: Wait for port to be released
+      ansible.builtin.wait_for:
+        port: "{{ serve_port }}"
+        state: stopped
+        timeout: 10
+      when: port_check.stdout != ""
+
+    - name: Start MkDocs development server
+      ansible.builtin.shell:
+        cmd: |
+          source {{ venv_dir }}/bin/activate
+          nohup mkdocs serve -a {{ serve_host }}:{{ serve_port }} > {{ log_file }} 2>&1 &
+          echo $! > {{ pid_file }}
+        chdir: "{{ project_dir }}"
+      changed_when: true
+
+    - name: Wait for server to start
+      ansible.builtin.wait_for:
+        host: "{{ serve_host }}"
+        port: "{{ serve_port }}"
+        delay: 2
+        timeout: 10
+        state: started
+
+    - name: Test server endpoint
+      ansible.builtin.uri:
+        url: "http://{{ serve_host }}:{{ serve_port }}/"
+        return_content: true
+      register: homepage
+
+    - name: Display server info
+      ansible.builtin.debug:
+        msg:
+          - "✅ MkDocs server is running!"
+          - "URL: http://{{ serve_host }}:{{ serve_port }}/"
+          - "Log file: {{ log_file }}"
+          - ""
+          - "Open your browser to http://127.0.0.1:8080/"
+          - ""
+          - "To stop: ansible-playbook -i ansible/inventory/hosts ansible/playbooks/stop.yml"

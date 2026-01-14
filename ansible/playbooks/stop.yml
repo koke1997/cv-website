@@ -1,0 +1,39 @@
+---
+- name: Stop CV Site Server
+  hosts: local
+  gather_facts: false
+  vars:
+    serve_port: 8080
+    pid_file: "/tmp/mkdocs_cv.pid"
+    log_file: "/tmp/mkdocs_cv.log"
+
+  tasks:
+    - name: Find process on port
+      ansible.builtin.command:
+        cmd: "lsof -ti:{{ serve_port }}"
+      register: port_pids
+      failed_when: false
+      changed_when: false
+
+    - name: Kill processes on port
+      ansible.builtin.command:
+        cmd: "kill -9 {{ port_pids.stdout }}"
+      when: port_pids.stdout != ""
+      failed_when: false
+      changed_when: true
+
+    - name: Remove PID file
+      ansible.builtin.file:
+        path: "{{ pid_file }}"
+        state: absent
+        mode: "0644"
+
+    - name: Remove log file
+      ansible.builtin.file:
+        path: "{{ log_file }}"
+        state: absent
+        mode: "0644"
+
+    - name: Success message
+      ansible.builtin.debug:
+        msg: "✅ MkDocs server stopped!"

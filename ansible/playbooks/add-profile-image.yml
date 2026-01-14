@@ -1,0 +1,40 @@
+---
+- name: Add Profile Image to CV Site
+  hosts: local
+  gather_facts: no
+  vars:
+    project_dir: "/Users/ivankokalovic/Documents/GitHub/Lebenslauf"
+    docs_dir: "{{ project_dir }}/docs"
+    assets_images_dir: "{{ docs_dir }}/assets/images"
+  
+  tasks:
+    - name: Check if profile image exists
+      ansible.builtin.stat:
+        path: "{{ assets_images_dir }}/profile.jpg"
+      register: profile_image
+    
+    - name: Display image status
+      ansible.builtin.debug:
+        msg: "{{ 'Profile image found at ' + assets_images_dir + '/profile.jpg ✅' if profile_image.stat.exists else 'Profile image NOT found ❌' }}"
+    
+    - name: List images directory contents
+      ansible.builtin.command:
+        cmd: "ls -la {{ assets_images_dir }}"
+      register: images_list
+      ignore_errors: yes
+    
+    - name: Display images directory
+      ansible.builtin.debug:
+        var: images_list.stdout_lines
+    
+    - name: Instructions for adding image
+      ansible.builtin.debug:
+        msg:
+          - "To add your profile image:"
+          - "1. Copy your image file to: {{ assets_images_dir }}/profile.jpg"
+          - "2. Supported formats: jpg, jpeg, png"
+          - "3. Recommended size: 400x400 pixels (square)"
+          - ""
+          - "Example command:"
+          - "cp /path/to/your/photo.jpg {{ assets_images_dir }}/profile.jpg"
+      when: not profile_image.stat.exists

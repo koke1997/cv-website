@@ -1,0 +1,70 @@
+---
+- name: Rebuild CV Site with Enhancements
+  hosts: local
+  gather_facts: false
+  vars:
+    project_dir: "/Users/ivankokalovic/Documents/GitHub/Lebenslauf"
+    venv_dir: "{{ project_dir }}/venv"
+    serve_host: "127.0.0.1"
+    serve_port: 8080
+    log_file: "/tmp/mkdocs_cv.log"
+    pid_file: "/tmp/mkdocs_cv.pid"
+
+  tasks:
+    - name: Find existing server process
+      ansible.builtin.command:
+        cmd: "lsof -ti:{{ serve_port }}"
+      register: port_pids
+      failed_when: false
+      changed_when: false
+
+    - name: Stop existing server if running
+      ansible.builtin.command:
+        cmd: "kill -9 {{ port_pids.stdout }}"
+      when: port_pids.stdout != ""
+      failed_when: false
+      changed_when: false
+
+    - name: Wait for port to be released
+      ansible.builtin.wait_for:
+        port: "{{ serve_port }}"
+        state: stopped
+        timeout: 5
+      failed_when: false
+
+    - name: Build site
+      ansible.builtin.shell:
+        cmd: |
+          source {{ venv_dir }}/bin/activate
+          mkdocs build --clean
+        chdir: "{{ project_dir }}"
+      register: build_output
+      changed_when: true
+
+    - name: Display build output
+      ansible.builtin.debug:
+        var: build_output.stdout_lines
+      when: build_output.stdout_lines | length > 0
+
+    - name: Start MkDocs development server
+      ansible.builtin.shell:
+        cmd: |
+          source {{ venv_dir }}/bin/activate
+          nohup mkdocs serve -a {{ serve_host }}:{{ serve_port }} > {{ log_file }} 2>&1 &
+          echo $! > {{ pid_file }}
+        chdir: "{{ project_dir }}"
+      changed_when: true
+
+    - name: Wait for server to start
+      ansible.builtin.wait_for:
+        host: "{{ serve_host }}"
+        port: "{{ serve_port }}"
+        delay: 2
+        timeout: 10
+        state: started
+
+    - name: Success message
+      ansible.builtin.debug:
+        msg:
+          - "✅ Site rebuilt and server restarted!"
+          - "URL: http://{{ serve_host }}:{{ serve_port }}/"

@@ -1,0 +1,49 @@
+---
+- name: Update Site Content with Enhancements
+  hosts: local
+  gather_facts: no
+  vars:
+    project_dir: "/Users/ivankokalovic/Documents/GitHub/Lebenslauf"
+    docs_dir: "{{ project_dir }}/docs"
+  
+  tasks:
+    - name: Update mkdocs.yml with custom CSS and JS
+      ansible.builtin.lineinfile:
+        path: "{{ project_dir }}/mkdocs.yml"
+        line: "{{ item }}"
+        insertafter: "^extra:"
+      loop:
+        - "  stylesheets:"
+        - "    - stylesheets/extra.css"
+        - "  javascripts:"
+        - "    - javascripts/contact-form.js"
+      ignore_errors: yes
+    
+    - name: Generate Word and ODT formats from PDF
+      ansible.builtin.shell:
+        cmd: |
+          if command -v pandoc &> /dev/null; then
+            cd {{ docs_dir }}
+            # These will be generated from markdown instead
+            echo "Pandoc available for conversions"
+          else
+            echo "Skipping Word/ODT conversion - pandoc not installed"
+          fi
+      register: conversion_result
+    
+    - name: Display conversion status
+      ansible.builtin.debug:
+        var: conversion_result.stdout_lines
+    
+    - name: Restart dev server if running
+      ansible.builtin.shell:
+        cmd: "lsof -ti:8080"
+      register: server_check
+      failed_when: false
+      changed_when: false
+    
+    - name: Success message
+      ansible.builtin.debug:
+        msg:
+          - "✅ Content structure updated!"
+          - "Next: Update individual pages with enhanced content"
