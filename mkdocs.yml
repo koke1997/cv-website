@@ -1,7 +1,7 @@
 site_name: Ivan Kokalović - CV
 site_description: Professional CV and Portfolio of Ivan Kokalović
 site_author: Ivan Kokalović
-site_url: https://koke1997.github.io/cv/
+site_url: https://koke1997.github.io/cv-website/
 use_directory_urls: true
 
 theme:
