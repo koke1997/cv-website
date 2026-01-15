@@ -2,7 +2,7 @@
 
 - Email: [ivankokalovic@protonmail.ch](mailto:ivankokalovic@protonmail.ch)
 - Location: Bremen, Germany
-- Website: [github.comkoke1997](https://github.com/koke1997)
+- Website: [github.com/koke1997](https://github.com/koke1997/)
 - LinkedIn: [kokalovic](https://linkedin.com/in/kokalovic)
 - GitHub: [koke1997](https://github.com/koke1997)
 
@@ -141,7 +141,7 @@
 
 
 # Education
-## **University of Mostar***2018 – 2019*
+## **University of Mostar***2018 – present*
 
 *Bachelor's degree (In Progress)* *in* *Information Technology*
 
@@ -165,13 +165,22 @@
 # Certifications
 **Python Essential Training:** LinkedIn Learning
 
-**Reactive Architecture - Introduction to Reactive Systems:**
+**Reactive Architecture - Introduction to Reactive Systems:** Lightbend Academy
 
 **OpenEDG Python Institute - Programming with Python:** Professional Certificate
 
 **Java Foundations by JetBrains:** Professional Certificate
 
 **Jira Fundamentals Badge:** Atlassian
+
+# Projects
+**LabanCompiler:** Computer vision tool converting video to Labanotation dance notation (Python, 7 stars)
+
+**ScalaCast:** Distributed video streaming server with peer discovery and fault tolerance (Scala)
+
+**Terraform MCP Server:** Model Context Protocol server for Terraform/IaC automation (Go)
+
+**Kolo:** Keycloak CI/CD automation toolkit (TypeScript)
 
 # Languages Spoken
 **Languages:** German (Native), English (Native), Croatian (Native), Serbian (Native), Slovenian (Limited), Spanish (Elementary)

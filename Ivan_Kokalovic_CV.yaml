@@ -2,7 +2,7 @@ cv:
   name: Ivan Kokalović
   location: Bremen, Germany
   email: ivankokalovic@protonmail.ch
-  website: https://github.com/koke1997
+  website: https://github.com/koke1997/
   social_networks:
     - network: LinkedIn
       username: kokalovic
@@ -10,7 +10,7 @@ cv:
       username: koke1997
   
   summary: |
-    Backend Developer and Technical Problem Solver with expertise in infrastructure management, IAM, and backend development. Experienced in Terragrunt, Java, Terraform, and Docker, with a strong background in technical support, fraud prevention, and system monitoring. Currently finishing Information Technology degree at University of Mostar, focusing on databases, data science, and financial analysis. Passionate about learning new technologies, AI, and solving complex technical challenges.
+    Backend Developer with 5+ years experience in infrastructure automation, IAM systems, and technical operations. Skilled in Terragrunt, Java, Terraform, and Docker. Previously led L3 support and fraud prevention at IDnow. Founded an IT consulting company in Bosnia. Completing IT degree at University of Mostar.
 
   sections:
     Experience:
@@ -97,7 +97,7 @@ cv:
         area: Information Technology
         degree: Bachelor's degree (In Progress)
         start_date: 2018
-        end_date: 2019
+        end_date: present
         highlights:
           - Focus on databases, data science, and financial analysis
 
@@ -119,14 +119,24 @@ cv:
       - label: Python Essential Training
         details: LinkedIn Learning
       - label: Reactive Architecture - Introduction to Reactive Systems
-        details: ""
+        details: Lightbend Academy
       - label: OpenEDG Python Institute - Programming with Python
         details: Professional Certificate
       - label: Java Foundations by JetBrains
         details: Professional Certificate
       - label: Jira Fundamentals Badge
         details: Atlassian
-    
+
+    Projects:
+      - label: LabanCompiler
+        details: "Computer vision tool converting video to Labanotation dance notation (Python, 7 stars)"
+      - label: ScalaCast
+        details: "Distributed video streaming server with peer discovery and fault tolerance (Scala)"
+      - label: Terraform MCP Server
+        details: "Model Context Protocol server for Terraform/IaC automation (Go)"
+      - label: Kolo
+        details: "Keycloak CI/CD automation toolkit (TypeScript)"
+
     "Languages Spoken":
       - label: Languages
         details: German (Native), English (Native), Croatian (Native), Serbian (Native), Slovenian (Limited), Spanish (Elementary)
