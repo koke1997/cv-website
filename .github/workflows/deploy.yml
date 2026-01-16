@@ -21,39 +21,43 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      
+
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      
-      - name: Install dependencies
-        run: |
-          pip install "rendercv[full]" mkdocs-material
-          sudo apt-get update && sudo apt-get install -y pandoc
 
-      - name: Render CV
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: sveltekit/package-lock.json
+
+      - name: Install Python dependencies
+        run: |
+          pip install "rendercv[full]"
+
+      - name: Render CV PDF
         run: |
           rendercv render Ivan_Kokalovic_CV.yaml
 
-      - name: Copy CV files to docs
+      - name: Copy CV PDF to SvelteKit static
         run: |
-          cp rendercv_output/Ivan_Kokalović_CV.pdf docs/
-          cp rendercv_output/Ivan_Kokalović_CV.md docs/cv.md
+          cp "rendercv_output/Ivan_Kokalović_CV.pdf" sveltekit/static/Ivan_Kokalovic_CV.pdf
 
-      - name: Generate DOCX and ODT formats
-        run: |
-          pandoc rendercv_output/Ivan_Kokalović_CV.md -o docs/Ivan_Kokalović_CV.docx
-          pandoc rendercv_output/Ivan_Kokalović_CV.md -o docs/Ivan_Kokalović_CV.odt
-      
-      - name: Build MkDocs site
-        run: |
-          mkdocs build
-      
+      - name: Install Node dependencies
+        working-directory: sveltekit
+        run: npm ci
+
+      - name: Build SvelteKit site
+        working-directory: sveltekit
+        run: npm run build
+
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: ./site
+          path: ./sveltekit/build
 
   deploy:
     environment:

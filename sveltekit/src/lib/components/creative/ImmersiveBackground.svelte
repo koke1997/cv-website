@@ -1,0 +1,1700 @@
+<script lang="ts">
+	import { onMount, onDestroy } from 'svelte';
+	import { browser } from '$app/environment';
+	import { creativeChapter, patternConfig as patternConfigStore, type PatternConfig } from '$lib/stores/creative';
+
+	interface Props {
+		currentRoute?: string;
+		mouseX?: number;
+		mouseY?: number;
+	}
+
+	let { currentRoute = '/', mouseX = 0.5, mouseY = 0.5 }: Props = $props();
+
+	// Subscribe to creative chapter store for /creative page
+	let storeChapter = $state(1);
+	if (browser) {
+		creativeChapter.subscribe((value) => {
+			storeChapter = value;
+		});
+	}
+
+	// Dual canvas for cross-fade transitions
+	let canvasCurrent = $state<HTMLCanvasElement | null>(null);
+	let canvasPrevious = $state<HTMLCanvasElement | null>(null);
+	let ctxCurrent: CanvasRenderingContext2D | null = null;
+	let ctxPrevious: CanvasRenderingContext2D | null = null;
+	let animationFrame: number | undefined;
+	let time = 0;
+	let width = 0;
+	let height = 0;
+
+	// Art style types (15 total)
+	type ArtStyle = 'particles' | 'flow' | 'gradient' | 'constellation' | 'ripple' | 'grid' |
+		'voronoi' | 'waves' | 'hexagon' | 'orbits' | 'bokeh' | 'curves' |
+		'magnetic' | 'spiral' | 'lattice';
+
+	// Subscribe to pattern config store
+	let patternConfig = $state<PatternConfig>({
+		opacity: 1,
+		speed: 1,
+		density: 1,
+		mouseInfluence: 1
+	});
+
+	if (browser) {
+		patternConfigStore.subscribe((value) => {
+			patternConfig = value;
+		});
+	}
+
+	// Route to art style mapping
+	function getArtStyle(route: string): ArtStyle {
+		const map: Record<string, ArtStyle> = {
+			'/': 'voronoi',
+			'/cv': 'waves',
+			'/creative': 'gradient',
+			'/download': 'orbits',
+			'/contact': 'bokeh',
+			'/editor': 'hexagon'
+		};
+		return map[route] || 'particles';
+	}
+
+	// For Creative page, map chapters to different styles (all 15 patterns)
+	function getCreativeChapterStyle(chapter: number): ArtStyle {
+		const styles: ArtStyle[] = [
+			'particles', 'flow', 'gradient', 'constellation', 'ripple', 'grid',
+			'voronoi', 'waves', 'hexagon', 'orbits', 'bokeh', 'curves',
+			'magnetic', 'spiral', 'lattice'
+		];
+		return styles[(chapter - 1) % styles.length];
+	}
+
+	// State
+	let artSeed = $state(Date.now());
+	let previousRoute = $state<string | null>(null);
+	let currentStyle = $state<ArtStyle>('particles');
+	let previousStyle = $state<ArtStyle | null>(null);
+	let animationStarted = false;
+
+	// Transition state
+	let transitionProgress = $state(1); // 0 = fully previous, 1 = fully current
+	let isTransitioning = $state(false);
+	const TRANSITION_DURATION = 800; // ms
+	let transitionStartTime = 0;
+
+	// Configurable opacity (0.5 = 50%, 1 = 100%, 2 = 200%)
+	let opacityMultiplier = $state(2.5);
+	let showOpacitySlider = $state(false);
+
+	// Particle system state for current canvas
+	interface Particle {
+		x: number;
+		y: number;
+		vx: number;
+		vy: number;
+		size: number;
+	}
+	let particles: Particle[] = [];
+	let particlesPrev: Particle[] = [];
+
+	// Gradient blob state
+	interface Blob {
+		x: number;
+		y: number;
+		vx: number;
+		vy: number;
+		radius: number;
+		opacity: number;
+	}
+	let blobs: Blob[] = [];
+	let blobsPrev: Blob[] = [];
+
+	// Voronoi seed points
+	interface VoronoiSeed {
+		x: number;
+		y: number;
+		vx: number;
+		vy: number;
+	}
+	let voronoiSeeds: VoronoiSeed[] = [];
+	let voronoiSeedsPrev: VoronoiSeed[] = [];
+
+	// Orbit particles
+	interface OrbitParticle {
+		orbitIndex: number;
+		angle: number;
+		speed: number;
+	}
+	let orbitParticles: OrbitParticle[] = [];
+	let orbitParticlesPrev: OrbitParticle[] = [];
+
+	// Bokeh light orbs
+	interface BokehOrb {
+		x: number;
+		y: number;
+		vx: number;
+		vy: number;
+		radius: number;
+		opacity: number;
+	}
+	let bokehOrbs: BokehOrb[] = [];
+	let bokehOrbsPrev: BokehOrb[] = [];
+
+	// Magnetic field attractors
+	interface MagneticAttractor {
+		x: number;
+		y: number;
+		vx: number;
+		vy: number;
+		strength: number;
+	}
+	let magneticAttractors: MagneticAttractor[] = [];
+	let magneticAttractorsPrev: MagneticAttractor[] = [];
+
+	// Spiral galaxy particles
+	interface SpiralParticle {
+		armIndex: number;
+		distance: number;
+		angle: number;
+		speed: number;
+		size: number;
+	}
+	let spiralParticles: SpiralParticle[] = [];
+	let spiralParticlesPrev: SpiralParticle[] = [];
+
+	// Liquid lattice nodes
+	interface LatticeNode {
+		baseX: number;
+		baseY: number;
+		x: number;
+		y: number;
+		vx: number;
+		vy: number;
+	}
+	let latticeNodes: LatticeNode[] = [];
+	let latticeNodesPrev: LatticeNode[] = [];
+
+	// Mulberry32 PRNG
+	function createRandom(seed: number) {
+		return function () {
+			let t = (seed += 0x6d2b79f5);
+			t = Math.imul(t ^ (t >>> 15), t | 1);
+			t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+			return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+		};
+	}
+
+	// Simple noise function
+	function noise(x: number, y: number, seed: number): number {
+		const rand = createRandom(Math.floor(x * 100 + y * 7919 + seed));
+		return rand() * 2 - 1;
+	}
+
+	// Initialize particles for particle-based styles
+	function initParticles(count: number, seed: number): Particle[] {
+		const rand = createRandom(seed);
+		const result: Particle[] = [];
+		for (let i = 0; i < count; i++) {
+			result.push({
+				x: rand() * width,
+				y: rand() * height,
+				vx: (rand() - 0.5) * 0.5,
+				vy: (rand() - 0.5) * 0.5,
+				size: rand() * 2.5 + 1.5
+			});
+		}
+		return result;
+	}
+
+	// Initialize blobs for gradient style
+	function initBlobs(count: number, seed: number): Blob[] {
+		const rand = createRandom(seed);
+		const result: Blob[] = [];
+		for (let i = 0; i < count; i++) {
+			result.push({
+				x: rand() * width,
+				y: rand() * height,
+				vx: (rand() - 0.5) * 0.3,
+				vy: (rand() - 0.5) * 0.3,
+				radius: rand() * 200 + 150,
+				opacity: rand() * 0.06 + 0.06
+			});
+		}
+		return result;
+	}
+
+	// Initialize Voronoi seeds
+	function initVoronoiSeeds(count: number, seed: number): VoronoiSeed[] {
+		const rand = createRandom(seed);
+		const result: VoronoiSeed[] = [];
+		for (let i = 0; i < count; i++) {
+			result.push({
+				x: rand() * width,
+				y: rand() * height,
+				vx: (rand() - 0.5) * 0.3,
+				vy: (rand() - 0.5) * 0.3
+			});
+		}
+		return result;
+	}
+
+	// Initialize orbit particles
+	function initOrbitParticles(seed: number): OrbitParticle[] {
+		const rand = createRandom(seed);
+		const result: OrbitParticle[] = [];
+		const orbitCount = 5;
+		const particlesPerOrbit = 3;
+		for (let o = 0; o < orbitCount; o++) {
+			for (let p = 0; p < particlesPerOrbit; p++) {
+				result.push({
+					orbitIndex: o,
+					angle: rand() * Math.PI * 2,
+					speed: 0.003 + rand() * 0.004
+				});
+			}
+		}
+		return result;
+	}
+
+	// Initialize bokeh orbs
+	function initBokehOrbs(count: number, seed: number): BokehOrb[] {
+		const rand = createRandom(seed);
+		const result: BokehOrb[] = [];
+		for (let i = 0; i < count; i++) {
+			result.push({
+				x: rand() * width,
+				y: rand() * height,
+				vx: (rand() - 0.5) * 0.2,
+				vy: (rand() - 0.5) * 0.2,
+				radius: rand() * 100 + 60,
+				opacity: rand() * 0.04 + 0.02
+			});
+		}
+		return result;
+	}
+
+	// Initialize magnetic attractors
+	function initMagneticAttractors(count: number, seed: number): MagneticAttractor[] {
+		const rand = createRandom(seed);
+		const result: MagneticAttractor[] = [];
+		for (let i = 0; i < count; i++) {
+			result.push({
+				x: rand() * width * 0.6 + width * 0.2,
+				y: rand() * height * 0.6 + height * 0.2,
+				vx: (rand() - 0.5) * 0.3,
+				vy: (rand() - 0.5) * 0.3,
+				strength: rand() > 0.5 ? 1 : -1 // positive or negative pole
+			});
+		}
+		return result;
+	}
+
+	// Initialize spiral particles
+	function initSpiralParticles(count: number, seed: number): SpiralParticle[] {
+		const rand = createRandom(seed);
+		const result: SpiralParticle[] = [];
+		const armCount = 3;
+		for (let i = 0; i < count; i++) {
+			result.push({
+				armIndex: Math.floor(rand() * armCount),
+				distance: rand() * Math.min(width, height) * 0.4 + 20,
+				angle: rand() * Math.PI * 2,
+				speed: 0.002 + rand() * 0.003,
+				size: rand() * 2 + 1
+			});
+		}
+		return result;
+	}
+
+	// Initialize lattice nodes
+	function initLatticeNodes(seed: number): LatticeNode[] {
+		const rand = createRandom(seed);
+		const result: LatticeNode[] = [];
+		const spacing = 60;
+		const cols = Math.ceil(width / spacing) + 1;
+		const rows = Math.ceil(height / spacing) + 1;
+
+		for (let i = 0; i < cols; i++) {
+			for (let j = 0; j < rows; j++) {
+				const baseX = i * spacing;
+				const baseY = j * spacing;
+				result.push({
+					baseX,
+					baseY,
+					x: baseX + (rand() - 0.5) * 5,
+					y: baseY + (rand() - 0.5) * 5,
+					vx: 0,
+					vy: 0
+				});
+			}
+		}
+		return result;
+	}
+
+	// Start transition to new style
+	function startTransition(newStyle: ArtStyle) {
+		if (currentStyle === newStyle) return;
+
+		// Save current state to previous
+		previousStyle = currentStyle;
+		particlesPrev = [...particles];
+		blobsPrev = [...blobs];
+		voronoiSeedsPrev = [...voronoiSeeds];
+		orbitParticlesPrev = [...orbitParticles];
+		bokehOrbsPrev = [...bokehOrbs];
+		magneticAttractorsPrev = [...magneticAttractors];
+		spiralParticlesPrev = [...spiralParticles];
+		latticeNodesPrev = [...latticeNodes];
+
+		// Set new style
+		currentStyle = newStyle;
+		artSeed = Date.now() + Math.random() * 100000;
+
+		// Initialize new art state
+		initializeArtState();
+
+		// Start transition
+		isTransitioning = true;
+		transitionProgress = 0;
+		transitionStartTime = performance.now();
+	}
+
+	// When route changes, update art style and start transition
+	$effect(() => {
+		const isFirstRender = previousRoute === null;
+		const routeChanged = currentRoute !== previousRoute;
+
+		if (isFirstRender) {
+			previousRoute = currentRoute;
+			if (currentRoute === '/creative') {
+				currentStyle = getCreativeChapterStyle(storeChapter);
+			} else {
+				currentStyle = getArtStyle(currentRoute);
+			}
+			artSeed = Date.now() + Math.random() * 100000;
+			if (width > 0 && height > 0) {
+				initializeArtState();
+			}
+		} else if (routeChanged) {
+			previousRoute = currentRoute;
+			const newStyle = currentRoute === '/creative'
+				? getCreativeChapterStyle(storeChapter)
+				: getArtStyle(currentRoute);
+			startTransition(newStyle);
+		}
+	});
+
+	// Also react to chapter changes on creative page
+	$effect(() => {
+		if (currentRoute === '/creative') {
+			const newStyle = getCreativeChapterStyle(storeChapter);
+			if (newStyle !== currentStyle && !isTransitioning) {
+				startTransition(newStyle);
+			}
+		}
+	});
+
+	function initializeArtState() {
+		const densityMult = patternConfig.density;
+		switch (currentStyle) {
+			case 'particles':
+				particles = initParticles(Math.round(40 * densityMult), artSeed);
+				break;
+			case 'flow':
+				// Flow field doesn't need particle init
+				break;
+			case 'gradient':
+				blobs = initBlobs(Math.round(5 * densityMult), artSeed);
+				break;
+			case 'constellation':
+				particles = initParticles(Math.round(25 * densityMult), artSeed);
+				break;
+			case 'ripple':
+				// Ripple doesn't need particle init
+				break;
+			case 'grid':
+				// Grid doesn't need particle init
+				break;
+			case 'voronoi':
+				voronoiSeeds = initVoronoiSeeds(Math.round(15 * densityMult), artSeed);
+				break;
+			case 'waves':
+				// Waves doesn't need state init
+				break;
+			case 'hexagon':
+				// Hexagon doesn't need state init
+				break;
+			case 'orbits':
+				orbitParticles = initOrbitParticles(artSeed);
+				break;
+			case 'bokeh':
+				bokehOrbs = initBokehOrbs(Math.round(12 * densityMult), artSeed);
+				break;
+			case 'curves':
+				// Curves doesn't need state init
+				break;
+			case 'magnetic':
+				magneticAttractors = initMagneticAttractors(Math.round(4 * densityMult), artSeed);
+				break;
+			case 'spiral':
+				spiralParticles = initSpiralParticles(Math.round(80 * densityMult), artSeed);
+				break;
+			case 'lattice':
+				latticeNodes = initLatticeNodes(artSeed);
+				break;
+		}
+	}
+
+	function resizeCanvas() {
+		if (!browser) return;
+		width = window.innerWidth;
+		height = window.innerHeight;
+
+		if (canvasCurrent) {
+			canvasCurrent.width = width * window.devicePixelRatio;
+			canvasCurrent.height = height * window.devicePixelRatio;
+			ctxCurrent?.scale(window.devicePixelRatio, window.devicePixelRatio);
+		}
+		if (canvasPrevious) {
+			canvasPrevious.width = width * window.devicePixelRatio;
+			canvasPrevious.height = height * window.devicePixelRatio;
+			ctxPrevious?.scale(window.devicePixelRatio, window.devicePixelRatio);
+		}
+		initializeArtState();
+	}
+
+	// ============================================
+	// 1. PARTICLE NETWORK (Home)
+	// ============================================
+	function drawParticleNetwork(ctx: CanvasRenderingContext2D, particleList: Particle[], seed: number) {
+		const opacity = 0.08 * opacityMultiplier * patternConfig.opacity;
+		const connectionDist = 120;
+		const speedMult = patternConfig.speed;
+		const mouseMult = patternConfig.mouseInfluence;
+
+		// Update particles
+		particleList.forEach((p) => {
+			// Mouse attraction
+			const dx = mouseX * width - p.x;
+			const dy = mouseY * height - p.y;
+			const dist = Math.sqrt(dx * dx + dy * dy);
+			if (dist < 200 && dist > 0) {
+				p.vx += (dx / dist) * 0.02 * mouseMult;
+				p.vy += (dy / dist) * 0.02 * mouseMult;
+			}
+
+			// Apply velocity with damping
+			p.x += p.vx * speedMult;
+			p.y += p.vy * speedMult;
+			p.vx *= 0.99;
+			p.vy *= 0.99;
+
+			// Add slight noise movement
+			p.vx += noise(p.x * 0.01, time * 0.5 * speedMult, seed) * 0.05;
+			p.vy += noise(p.y * 0.01, time * 0.5 * speedMult + 100, seed) * 0.05;
+
+			// Wrap around edges
+			if (p.x < 0) p.x = width;
+			if (p.x > width) p.x = 0;
+			if (p.y < 0) p.y = height;
+			if (p.y > height) p.y = 0;
+		});
+
+		// Draw connections
+		ctx.strokeStyle = `rgba(60, 60, 60, ${opacity * 0.4})`;
+		ctx.lineWidth = 0.5;
+		for (let i = 0; i < particleList.length; i++) {
+			for (let j = i + 1; j < particleList.length; j++) {
+				const dx = particleList[i].x - particleList[j].x;
+				const dy = particleList[i].y - particleList[j].y;
+				const dist = Math.sqrt(dx * dx + dy * dy);
+				if (dist < connectionDist) {
+					ctx.globalAlpha = (1 - dist / connectionDist) * opacity;
+					ctx.beginPath();
+					ctx.moveTo(particleList[i].x, particleList[i].y);
+					ctx.lineTo(particleList[j].x, particleList[j].y);
+					ctx.stroke();
+				}
+			}
+		}
+
+		// Draw particles
+		ctx.globalAlpha = 1;
+		ctx.fillStyle = `rgba(60, 60, 60, ${opacity})`;
+		particleList.forEach((p) => {
+			ctx.beginPath();
+			ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+			ctx.fill();
+		});
+	}
+
+	// ============================================
+	// 2. FLOW FIELD (CV)
+	// ============================================
+	function drawFlowField(ctx: CanvasRenderingContext2D, seed: number) {
+		const opacity = 0.06 * opacityMultiplier * patternConfig.opacity;
+		const speedMult = patternConfig.speed;
+		const mouseMult = patternConfig.mouseInfluence;
+		const cols = 25;
+		const rows = 15;
+		const cellW = width / cols;
+		const cellH = height / rows;
+
+		ctx.strokeStyle = `rgba(60, 60, 60, ${opacity})`;
+		ctx.lineWidth = 1;
+		ctx.globalAlpha = 1;
+
+		for (let i = 0; i < cols; i++) {
+			for (let j = 0; j < rows; j++) {
+				const x = i * cellW + cellW / 2;
+				const y = j * cellH + cellH / 2;
+
+				// Mouse influence
+				const dx = (mouseX * width - x) / width;
+				const dy = (mouseY * height - y) / height;
+				const dist = Math.sqrt(dx * dx + dy * dy);
+				const mouseInfluence = Math.max(0, 1 - dist * 2.5) * mouseMult;
+
+				// Calculate angle from noise
+				const angle =
+					Math.sin(x * 0.005 + time * 0.3 * speedMult) * Math.cos(y * 0.005 + time * 0.2 * speedMult) * Math.PI +
+					noise(i * 0.3, j * 0.3, seed) * 0.5 +
+					mouseInfluence * Math.atan2(dy, dx);
+
+				const len = 15 + mouseInfluence * 10;
+
+				ctx.beginPath();
+				ctx.moveTo(x, y);
+				ctx.lineTo(x + Math.cos(angle) * len, y + Math.sin(angle) * len);
+				ctx.stroke();
+			}
+		}
+	}
+
+	// ============================================
+	// 3. GRADIENT MESH (Creative)
+	// ============================================
+	function drawGradientMesh(ctx: CanvasRenderingContext2D, blobList: Blob[]) {
+		const speedMult = patternConfig.speed;
+		const mouseMult = patternConfig.mouseInfluence;
+
+		// Update blobs
+		blobList.forEach((b) => {
+			// Mouse repulsion
+			const dx = mouseX * width - b.x;
+			const dy = mouseY * height - b.y;
+			const dist = Math.sqrt(dx * dx + dy * dy);
+			if (dist < 300 && dist > 0) {
+				b.vx -= (dx / dist) * 0.1 * mouseMult;
+				b.vy -= (dy / dist) * 0.1 * mouseMult;
+			}
+
+			b.x += b.vx + Math.sin(time * 0.5 * speedMult + b.radius) * 0.5;
+			b.y += b.vy + Math.cos(time * 0.4 * speedMult + b.radius) * 0.5;
+			b.vx *= 0.98;
+			b.vy *= 0.98;
+
+			// Keep blobs on screen
+			if (b.x < -b.radius) b.x = width + b.radius;
+			if (b.x > width + b.radius) b.x = -b.radius;
+			if (b.y < -b.radius) b.y = height + b.radius;
+			if (b.y > height + b.radius) b.y = -b.radius;
+		});
+
+		// Draw soft gradient blobs
+		blobList.forEach((b) => {
+			const adjustedOpacity = b.opacity * opacityMultiplier * patternConfig.opacity;
+			const gradient = ctx.createRadialGradient(b.x, b.y, 0, b.x, b.y, b.radius);
+			gradient.addColorStop(0, `rgba(80, 80, 80, ${adjustedOpacity})`);
+			gradient.addColorStop(0.5, `rgba(80, 80, 80, ${adjustedOpacity * 0.5})`);
+			gradient.addColorStop(1, 'rgba(80, 80, 80, 0)');
+			ctx.fillStyle = gradient;
+			ctx.fillRect(b.x - b.radius, b.y - b.radius, b.radius * 2, b.radius * 2);
+		});
+	}
+
+	// ============================================
+	// 4. CONSTELLATION (Download)
+	// ============================================
+	function drawConstellation(ctx: CanvasRenderingContext2D, particleList: Particle[]) {
+		const opacity = 0.06 * opacityMultiplier * patternConfig.opacity;
+		const speedMult = patternConfig.speed;
+		const mouseMult = patternConfig.mouseInfluence;
+		const connectionDist = 150;
+
+		// Update particles (slow drift)
+		particleList.forEach((p) => {
+			p.x += p.vx * 0.3 * speedMult;
+			p.y += p.vy * 0.3 * speedMult;
+
+			// Gentle wrapping
+			if (p.x < 0) p.x = width;
+			if (p.x > width) p.x = 0;
+			if (p.y < 0) p.y = height;
+			if (p.y > height) p.y = 0;
+		});
+
+		// Draw connections to nearest 2-3 neighbors
+		ctx.strokeStyle = `rgba(60, 60, 60, ${opacity * 0.3})`;
+		ctx.lineWidth = 0.5;
+		ctx.globalAlpha = 1;
+
+		particleList.forEach((p, i) => {
+			// Find nearest neighbors
+			const distances = particleList
+				.map((other, j) => ({
+					j,
+					dist: Math.sqrt((p.x - other.x) ** 2 + (p.y - other.y) ** 2)
+				}))
+				.filter((d) => d.j !== i && d.dist < connectionDist)
+				.sort((a, b) => a.dist - b.dist)
+				.slice(0, 2);
+
+			distances.forEach((d) => {
+				ctx.globalAlpha = (1 - d.dist / connectionDist) * opacity;
+				ctx.beginPath();
+				ctx.moveTo(p.x, p.y);
+				ctx.lineTo(particleList[d.j].x, particleList[d.j].y);
+				ctx.stroke();
+			});
+		});
+
+		// Draw stars with twinkling
+		ctx.globalAlpha = 1;
+		particleList.forEach((p, i) => {
+			const twinkle = Math.sin(time * 2 * speedMult + i * 0.5) * 0.5 + 0.5;
+			const size = p.size * (0.7 + twinkle * 0.3);
+			ctx.fillStyle = `rgba(60, 60, 60, ${opacity * (0.7 + twinkle * 0.3)})`;
+			ctx.beginPath();
+			ctx.arc(p.x, p.y, size, 0, Math.PI * 2);
+			ctx.fill();
+		});
+
+		// Mouse glow
+		const glowRadius = 80 * mouseMult;
+		const gradient = ctx.createRadialGradient(
+			mouseX * width,
+			mouseY * height,
+			0,
+			mouseX * width,
+			mouseY * height,
+			glowRadius
+		);
+		gradient.addColorStop(0, `rgba(60, 60, 60, ${opacity * 0.5 * mouseMult})`);
+		gradient.addColorStop(1, 'rgba(60, 60, 60, 0)');
+		ctx.fillStyle = gradient;
+		ctx.beginPath();
+		ctx.arc(mouseX * width, mouseY * height, glowRadius, 0, Math.PI * 2);
+		ctx.fill();
+	}
+
+	// ============================================
+	// 5. RIPPLE PULSE (Contact)
+	// ============================================
+	function drawRipplePulse(ctx: CanvasRenderingContext2D) {
+		const opacity = 0.05 * opacityMultiplier * patternConfig.opacity;
+		const speedMult = patternConfig.speed;
+		const mouseMult = patternConfig.mouseInfluence;
+		const centerX = width / 2 + (mouseX - 0.5) * 150 * mouseMult;
+		const centerY = height / 2 + (mouseY - 0.5) * 150 * mouseMult;
+		const maxRadius = Math.max(width, height) * 0.6;
+		const ringCount = 12;
+
+		ctx.strokeStyle = `rgba(60, 60, 60, ${opacity})`;
+		ctx.lineWidth = 1;
+
+		for (let i = 0; i < ringCount; i++) {
+			const phase = (time * 0.5 * speedMult + i * 0.3) % (Math.PI * 2);
+			const progress = phase / (Math.PI * 2);
+			const radius = progress * maxRadius;
+			const fadeOut = 1 - progress;
+
+			ctx.globalAlpha = fadeOut * opacity;
+			ctx.beginPath();
+			ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+			ctx.stroke();
+		}
+
+		// Center dot
+		ctx.globalAlpha = opacity * 2;
+		ctx.fillStyle = `rgba(60, 60, 60, ${opacity * 2})`;
+		ctx.beginPath();
+		ctx.arc(centerX, centerY, 4, 0, Math.PI * 2);
+		ctx.fill();
+
+		ctx.globalAlpha = 1;
+	}
+
+	// ============================================
+	// 6. DOT GRID (Editor)
+	// ============================================
+	function drawDotGrid(ctx: CanvasRenderingContext2D) {
+		const opacity = 0.07 * opacityMultiplier * patternConfig.opacity;
+		const speedMult = patternConfig.speed;
+		const mouseMult = patternConfig.mouseInfluence;
+		const spacing = 40;
+		const cols = Math.ceil(width / spacing) + 1;
+		const rows = Math.ceil(height / spacing) + 1;
+
+		ctx.fillStyle = `rgba(60, 60, 60, ${opacity})`;
+		ctx.globalAlpha = 1;
+
+		for (let i = 0; i < cols; i++) {
+			for (let j = 0; j < rows; j++) {
+				const baseX = i * spacing;
+				const baseY = j * spacing;
+
+				// Wave displacement
+				const waveX = Math.sin(time * 0.8 * speedMult + j * 0.2) * 3;
+				const waveY = Math.cos(time * 0.6 * speedMult + i * 0.15) * 3;
+
+				// Mouse displacement
+				const dx = mouseX * width - baseX;
+				const dy = mouseY * height - baseY;
+				const dist = Math.sqrt(dx * dx + dy * dy);
+				const mouseDisplace = dist < 100 ? ((100 - dist) / 100) * 15 * mouseMult : 0;
+				const mouseAngle = Math.atan2(dy, dx);
+
+				const x = baseX + waveX - Math.cos(mouseAngle) * mouseDisplace;
+				const y = baseY + waveY - Math.sin(mouseAngle) * mouseDisplace;
+
+				// Size variation based on wave
+				const sizeMod = Math.sin(time * speedMult + i * 0.3 + j * 0.2) * 0.3 + 1;
+				const size = 1.5 * sizeMod;
+
+				ctx.beginPath();
+				ctx.arc(x, y, size, 0, Math.PI * 2);
+				ctx.fill();
+			}
+		}
+	}
+
+	// ============================================
+	// 7. VORONOI TESSELLATION
+	// ============================================
+	function drawVoronoi(ctx: CanvasRenderingContext2D, seeds: VoronoiSeed[]) {
+		const opacity = 0.06 * opacityMultiplier * patternConfig.opacity;
+		const speedMult = patternConfig.speed;
+		const mouseMult = patternConfig.mouseInfluence;
+
+		// Update seed positions
+		seeds.forEach((s) => {
+			// Mouse influence
+			const dx = mouseX * width - s.x;
+			const dy = mouseY * height - s.y;
+			const dist = Math.sqrt(dx * dx + dy * dy);
+			if (dist < 200 && dist > 0) {
+				s.vx -= (dx / dist) * 0.02 * mouseMult;
+				s.vy -= (dy / dist) * 0.02 * mouseMult;
+			}
+
+			s.x += s.vx + Math.sin(time * 0.3 * speedMult + s.y * 0.01) * 0.3;
+			s.y += s.vy + Math.cos(time * 0.25 * speedMult + s.x * 0.01) * 0.3;
+			s.vx *= 0.99;
+			s.vy *= 0.99;
+
+			// Wrap around
+			if (s.x < -50) s.x = width + 50;
+			if (s.x > width + 50) s.x = -50;
+			if (s.y < -50) s.y = height + 50;
+			if (s.y > height + 50) s.y = -50;
+		});
+
+		// Draw Voronoi edges by sampling points
+		const step = 20;
+		ctx.strokeStyle = `rgba(60, 60, 60, ${opacity})`;
+		ctx.lineWidth = 1;
+		ctx.globalAlpha = 1;
+
+		for (let x = 0; x < width; x += step) {
+			for (let y = 0; y < height; y += step) {
+				// Find two closest seeds
+				let closest1 = 0, closest2 = 1;
+				let dist1 = Infinity, dist2 = Infinity;
+
+				seeds.forEach((s, i) => {
+					const d = Math.sqrt((x - s.x) ** 2 + (y - s.y) ** 2);
+					if (d < dist1) {
+						dist2 = dist1;
+						closest2 = closest1;
+						dist1 = d;
+						closest1 = i;
+					} else if (d < dist2) {
+						dist2 = d;
+						closest2 = i;
+					}
+				});
+
+				// If close to edge (similar distances), draw point
+				const edgeness = Math.abs(dist1 - dist2) / step;
+				if (edgeness < 1.2) {
+					const alpha = (1 - edgeness / 1.2) * opacity;
+					ctx.fillStyle = `rgba(60, 60, 60, ${alpha})`;
+					ctx.beginPath();
+					ctx.arc(x, y, 1.5, 0, Math.PI * 2);
+					ctx.fill();
+				}
+			}
+		}
+
+		// Draw seed points
+		ctx.fillStyle = `rgba(60, 60, 60, ${opacity * 1.5})`;
+		seeds.forEach((s) => {
+			ctx.beginPath();
+			ctx.arc(s.x, s.y, 3, 0, Math.PI * 2);
+			ctx.fill();
+		});
+	}
+
+	// ============================================
+	// 8. WAVE CONTOURS (Topographic)
+	// ============================================
+	function drawWaveContours(ctx: CanvasRenderingContext2D) {
+		const opacity = 0.06 * opacityMultiplier * patternConfig.opacity;
+		const speedMult = patternConfig.speed;
+		const mouseMult = patternConfig.mouseInfluence;
+		const waveCount = 12;
+		const pointCount = 80;
+
+		ctx.strokeStyle = `rgba(60, 60, 60, ${opacity})`;
+		ctx.lineWidth = 1;
+		ctx.globalAlpha = 1;
+
+		for (let w = 0; w < waveCount; w++) {
+			const baseY = (height / (waveCount + 1)) * (w + 1);
+			const phase = time * 0.4 * speedMult + w * 0.3;
+			const amplitude = 20 + Math.sin(time * 0.2 * speedMult + w) * 10;
+
+			ctx.beginPath();
+			for (let i = 0; i <= pointCount; i++) {
+				const x = (width / pointCount) * i;
+				const normalizedX = i / pointCount;
+
+				// Mouse distortion
+				const dx = mouseX - normalizedX;
+				const dy = mouseY - (baseY / height);
+				const mouseDist = Math.sqrt(dx * dx + dy * dy);
+				const mouseEffect = Math.max(0, 1 - mouseDist * 3) * 30 * mouseMult;
+
+				const y = baseY +
+					Math.sin(normalizedX * Math.PI * 3 + phase) * amplitude +
+					Math.sin(normalizedX * Math.PI * 5 + phase * 1.3) * (amplitude * 0.3) +
+					Math.sin(mouseDist * 10 - time * 2 * speedMult) * mouseEffect;
+
+				if (i === 0) {
+					ctx.moveTo(x, y);
+				} else {
+					ctx.lineTo(x, y);
+				}
+			}
+			ctx.stroke();
+		}
+	}
+
+	// ============================================
+	// 9. HEXAGONAL HIVE
+	// ============================================
+	function drawHexagonalGrid(ctx: CanvasRenderingContext2D) {
+		const opacity = 0.06 * opacityMultiplier * patternConfig.opacity;
+		const speedMult = patternConfig.speed;
+		const mouseMult = patternConfig.mouseInfluence;
+		const hexSize = 35;
+		const hexHeight = hexSize * Math.sqrt(3);
+		const hexWidth = hexSize * 2;
+
+		ctx.strokeStyle = `rgba(60, 60, 60, ${opacity})`;
+		ctx.lineWidth = 1;
+
+		const cols = Math.ceil(width / (hexWidth * 0.75)) + 2;
+		const rows = Math.ceil(height / hexHeight) + 2;
+
+		for (let row = -1; row < rows; row++) {
+			for (let col = -1; col < cols; col++) {
+				const offsetX = (row % 2) * (hexWidth * 0.375);
+				const centerX = col * hexWidth * 0.75 + offsetX;
+				const centerY = row * hexHeight * 0.5;
+
+				// Mouse proximity for glow
+				const dx = mouseX * width - centerX;
+				const dy = mouseY * height - centerY;
+				const dist = Math.sqrt(dx * dx + dy * dy);
+				const glow = Math.max(0, 1 - dist / 150) * mouseMult;
+
+				// Pulse based on position and time
+				const pulse = Math.sin(time * 1.5 * speedMult + col * 0.3 + row * 0.2) * 0.3 + 0.7;
+				const alpha = opacity * pulse + glow * opacity * 2;
+
+				ctx.globalAlpha = alpha;
+				ctx.beginPath();
+
+				// Draw hexagon
+				for (let i = 0; i < 6; i++) {
+					const angle = (Math.PI / 3) * i - Math.PI / 6;
+					const hx = centerX + Math.cos(angle) * hexSize;
+					const hy = centerY + Math.sin(angle) * hexSize;
+					if (i === 0) {
+						ctx.moveTo(hx, hy);
+					} else {
+						ctx.lineTo(hx, hy);
+					}
+				}
+				ctx.closePath();
+				ctx.stroke();
+
+				// Fill with glow if mouse nearby
+				if (glow > 0.3) {
+					ctx.fillStyle = `rgba(60, 60, 60, ${glow * opacity * 0.5})`;
+					ctx.fill();
+				}
+			}
+		}
+		ctx.globalAlpha = 1;
+	}
+
+	// ============================================
+	// 10. ORBITING RINGS
+	// ============================================
+	function drawOrbitingRings(ctx: CanvasRenderingContext2D, orbitParts: OrbitParticle[]) {
+		const opacity = 0.06 * opacityMultiplier * patternConfig.opacity;
+		const speedMult = patternConfig.speed;
+		const mouseMult = patternConfig.mouseInfluence;
+		const centerX = width / 2 + (mouseX - 0.5) * 100 * mouseMult;
+		const centerY = height / 2 + (mouseY - 0.5) * 100 * mouseMult;
+
+		// Define orbits
+		const orbits = [
+			{ rx: 80, ry: 40, rotation: 0 },
+			{ rx: 130, ry: 60, rotation: Math.PI / 4 },
+			{ rx: 180, ry: 80, rotation: -Math.PI / 6 },
+			{ rx: 240, ry: 100, rotation: Math.PI / 3 },
+			{ rx: 300, ry: 130, rotation: -Math.PI / 5 }
+		];
+
+		// Draw orbit paths
+		ctx.strokeStyle = `rgba(60, 60, 60, ${opacity * 0.4})`;
+		ctx.lineWidth = 0.5;
+		ctx.globalAlpha = 1;
+
+		orbits.forEach((orbit, i) => {
+			const rot = orbit.rotation + time * 0.05 * speedMult * (i % 2 === 0 ? 1 : -1);
+			ctx.beginPath();
+			for (let a = 0; a <= Math.PI * 2; a += 0.1) {
+				const x = Math.cos(a) * orbit.rx;
+				const y = Math.sin(a) * orbit.ry;
+				const rx = x * Math.cos(rot) - y * Math.sin(rot) + centerX;
+				const ry = x * Math.sin(rot) + y * Math.cos(rot) + centerY;
+				if (a === 0) ctx.moveTo(rx, ry);
+				else ctx.lineTo(rx, ry);
+			}
+			ctx.closePath();
+			ctx.stroke();
+		});
+
+		// Update and draw particles
+		ctx.fillStyle = `rgba(60, 60, 60, ${opacity * 2})`;
+		orbitParts.forEach((p) => {
+			p.angle += p.speed * speedMult;
+			const orbit = orbits[p.orbitIndex];
+			const rot = orbit.rotation + time * 0.05 * speedMult * (p.orbitIndex % 2 === 0 ? 1 : -1);
+
+			const x = Math.cos(p.angle) * orbit.rx;
+			const y = Math.sin(p.angle) * orbit.ry;
+			const px = x * Math.cos(rot) - y * Math.sin(rot) + centerX;
+			const py = x * Math.sin(rot) + y * Math.cos(rot) + centerY;
+
+			ctx.beginPath();
+			ctx.arc(px, py, 3, 0, Math.PI * 2);
+			ctx.fill();
+		});
+
+		// Center point
+		ctx.fillStyle = `rgba(60, 60, 60, ${opacity * 1.5})`;
+		ctx.beginPath();
+		ctx.arc(centerX, centerY, 5, 0, Math.PI * 2);
+		ctx.fill();
+	}
+
+	// ============================================
+	// 11. BOKEH LIGHTS
+	// ============================================
+	function drawBokehLights(ctx: CanvasRenderingContext2D, orbs: BokehOrb[]) {
+		const speedMult = patternConfig.speed;
+		const mouseMult = patternConfig.mouseInfluence;
+
+		// Update orbs
+		orbs.forEach((o) => {
+			// Gentle mouse attraction
+			const dx = mouseX * width - o.x;
+			const dy = mouseY * height - o.y;
+			const dist = Math.sqrt(dx * dx + dy * dy);
+			if (dist > 50 && dist < 400) {
+				o.vx += (dx / dist) * 0.005 * mouseMult;
+				o.vy += (dy / dist) * 0.005 * mouseMult;
+			}
+
+			o.x += o.vx + Math.sin(time * 0.2 * speedMult + o.radius * 0.01) * 0.3;
+			o.y += o.vy + Math.cos(time * 0.15 * speedMult + o.radius * 0.01) * 0.3;
+			o.vx *= 0.99;
+			o.vy *= 0.99;
+
+			// Keep on screen with soft bounce
+			if (o.x < -o.radius) o.x = width + o.radius;
+			if (o.x > width + o.radius) o.x = -o.radius;
+			if (o.y < -o.radius) o.y = height + o.radius;
+			if (o.y > height + o.radius) o.y = -o.radius;
+		});
+
+		// Draw orbs with soft gradients
+		orbs.forEach((o) => {
+			const adjustedOpacity = o.opacity * opacityMultiplier * patternConfig.opacity;
+			const gradient = ctx.createRadialGradient(o.x, o.y, 0, o.x, o.y, o.radius);
+			gradient.addColorStop(0, `rgba(70, 70, 70, ${adjustedOpacity})`);
+			gradient.addColorStop(0.3, `rgba(70, 70, 70, ${adjustedOpacity * 0.6})`);
+			gradient.addColorStop(0.6, `rgba(70, 70, 70, ${adjustedOpacity * 0.2})`);
+			gradient.addColorStop(1, 'rgba(70, 70, 70, 0)');
+
+			ctx.fillStyle = gradient;
+			ctx.beginPath();
+			ctx.arc(o.x, o.y, o.radius, 0, Math.PI * 2);
+			ctx.fill();
+		});
+	}
+
+	// ============================================
+	// 12. BEZIER CURVES (String Art)
+	// ============================================
+	function drawBezierCurves(ctx: CanvasRenderingContext2D, seed: number) {
+		const opacity = 0.05 * opacityMultiplier * patternConfig.opacity;
+		const speedMult = patternConfig.speed;
+		const mouseMult = patternConfig.mouseInfluence;
+		const pointCount = 24;
+		const connectionCount = 8;
+
+		ctx.strokeStyle = `rgba(60, 60, 60, ${opacity})`;
+		ctx.lineWidth = 0.5;
+		ctx.globalAlpha = 1;
+
+		const centerX = width / 2;
+		const centerY = height / 2;
+		const radius = Math.min(width, height) * 0.35;
+
+		// Generate points on an ellipse that rotates over time
+		const points: { x: number; y: number }[] = [];
+		const rotationOffset = time * 0.1 * speedMult;
+		const mouseOffsetX = (mouseX - 0.5) * 50 * mouseMult;
+		const mouseOffsetY = (mouseY - 0.5) * 50 * mouseMult;
+
+		for (let i = 0; i < pointCount; i++) {
+			const angle = (Math.PI * 2 / pointCount) * i + rotationOffset;
+			const wobble = Math.sin(time * 0.5 * speedMult + i * 0.5) * 20;
+			const rx = radius + wobble + Math.sin(angle * 3) * 30;
+			const ry = radius * 0.7 + wobble + Math.cos(angle * 2) * 20;
+
+			points.push({
+				x: centerX + Math.cos(angle) * rx + mouseOffsetX,
+				y: centerY + Math.sin(angle) * ry + mouseOffsetY
+			});
+		}
+
+		// Draw bezier curves connecting points
+		for (let i = 0; i < pointCount; i++) {
+			for (let j = 1; j <= connectionCount; j++) {
+				const targetIndex = (i + j * 3) % pointCount;
+				const p1 = points[i];
+				const p2 = points[targetIndex];
+
+				// Control point influenced by mouse
+				const cpx = (p1.x + p2.x) / 2 + (mouseX - 0.5) * 30 * mouseMult;
+				const cpy = (p1.y + p2.y) / 2 + (mouseY - 0.5) * 30 * mouseMult;
+
+				ctx.beginPath();
+				ctx.moveTo(p1.x, p1.y);
+				ctx.quadraticCurveTo(cpx, cpy, p2.x, p2.y);
+				ctx.stroke();
+			}
+		}
+
+		// Draw anchor points
+		ctx.fillStyle = `rgba(60, 60, 60, ${opacity * 1.5})`;
+		points.forEach((p) => {
+			ctx.beginPath();
+			ctx.arc(p.x, p.y, 2, 0, Math.PI * 2);
+			ctx.fill();
+		});
+	}
+
+	// ============================================
+	// 13. MAGNETIC FIELD
+	// ============================================
+	function drawMagneticField(ctx: CanvasRenderingContext2D, attractors: MagneticAttractor[]) {
+		const opacity = 0.05 * opacityMultiplier * patternConfig.opacity;
+		const speedMult = patternConfig.speed;
+		const mouseMult = patternConfig.mouseInfluence;
+
+		// Update attractor positions
+		attractors.forEach((a) => {
+			// Mouse influence
+			const dx = mouseX * width - a.x;
+			const dy = mouseY * height - a.y;
+			const dist = Math.sqrt(dx * dx + dy * dy);
+			if (dist < 200 && dist > 0) {
+				a.vx += (dx / dist) * 0.01 * mouseMult;
+				a.vy += (dy / dist) * 0.01 * mouseMult;
+			}
+
+			a.x += a.vx * speedMult + Math.sin(time * 0.3 + a.strength) * 0.5;
+			a.y += a.vy * speedMult + Math.cos(time * 0.25 + a.strength) * 0.5;
+			a.vx *= 0.98;
+			a.vy *= 0.98;
+
+			// Keep on screen
+			if (a.x < 50) a.vx += 0.1;
+			if (a.x > width - 50) a.vx -= 0.1;
+			if (a.y < 50) a.vy += 0.1;
+			if (a.y > height - 50) a.vy -= 0.1;
+		});
+
+		// Draw field lines
+		const lineCount = 30;
+		const steps = 50;
+		ctx.strokeStyle = `rgba(60, 60, 60, ${opacity})`;
+		ctx.lineWidth = 0.8;
+
+		for (let l = 0; l < lineCount; l++) {
+			const startAngle = (Math.PI * 2 / lineCount) * l + time * 0.1;
+
+			// Start from each attractor
+			attractors.forEach((attractor) => {
+				const startX = attractor.x + Math.cos(startAngle) * 20;
+				const startY = attractor.y + Math.sin(startAngle) * 20;
+
+				ctx.beginPath();
+				ctx.moveTo(startX, startY);
+
+				let px = startX;
+				let py = startY;
+
+				for (let s = 0; s < steps; s++) {
+					// Calculate field direction at this point
+					let fx = 0, fy = 0;
+					attractors.forEach((a) => {
+						const dx = a.x - px;
+						const dy = a.y - py;
+						const d = Math.sqrt(dx * dx + dy * dy) + 1;
+						const strength = a.strength / (d * d) * 5000;
+						fx += (dy / d) * strength; // Perpendicular for field lines
+						fy -= (dx / d) * strength;
+					});
+
+					// Normalize
+					const mag = Math.sqrt(fx * fx + fy * fy) + 0.001;
+					fx = (fx / mag) * 5;
+					fy = (fy / mag) * 5;
+
+					px += fx;
+					py += fy;
+
+					// Stop if out of bounds
+					if (px < 0 || px > width || py < 0 || py > height) break;
+
+					ctx.lineTo(px, py);
+				}
+				ctx.stroke();
+			});
+		}
+
+		// Draw attractor points
+		attractors.forEach((a) => {
+			const size = a.strength > 0 ? 8 : 6;
+			ctx.fillStyle = `rgba(60, 60, 60, ${opacity * 3})`;
+			ctx.beginPath();
+			ctx.arc(a.x, a.y, size, 0, Math.PI * 2);
+			ctx.fill();
+
+			// Draw + or - symbol
+			ctx.strokeStyle = `rgba(245, 242, 235, ${opacity * 5})`;
+			ctx.lineWidth = 2;
+			ctx.beginPath();
+			ctx.moveTo(a.x - 4, a.y);
+			ctx.lineTo(a.x + 4, a.y);
+			if (a.strength > 0) {
+				ctx.moveTo(a.x, a.y - 4);
+				ctx.lineTo(a.x, a.y + 4);
+			}
+			ctx.stroke();
+		});
+	}
+
+	// ============================================
+	// 14. SPIRAL GALAXY
+	// ============================================
+	function drawSpiralGalaxy(ctx: CanvasRenderingContext2D, spirals: SpiralParticle[]) {
+		const opacity = 0.06 * opacityMultiplier * patternConfig.opacity;
+		const speedMult = patternConfig.speed;
+		const mouseMult = patternConfig.mouseInfluence;
+
+		const centerX = width / 2 + (mouseX - 0.5) * 80 * mouseMult;
+		const centerY = height / 2 + (mouseY - 0.5) * 80 * mouseMult;
+		const armCount = 3;
+		const rotationSpeed = 0.02 * speedMult;
+
+		// Draw spiral arms (background glow)
+		ctx.globalAlpha = opacity * 0.3;
+		for (let arm = 0; arm < armCount; arm++) {
+			const armAngle = (Math.PI * 2 / armCount) * arm + time * rotationSpeed;
+
+			ctx.beginPath();
+			for (let r = 20; r < Math.min(width, height) * 0.4; r += 5) {
+				const spiralAngle = armAngle + r * 0.008;
+				const x = centerX + Math.cos(spiralAngle) * r;
+				const y = centerY + Math.sin(spiralAngle) * r * 0.7;
+
+				if (r === 20) ctx.moveTo(x, y);
+				else ctx.lineTo(x, y);
+			}
+			ctx.strokeStyle = `rgba(60, 60, 60, ${opacity * 0.5})`;
+			ctx.lineWidth = 15;
+			ctx.stroke();
+		}
+
+		// Update and draw particles
+		ctx.globalAlpha = 1;
+		spirals.forEach((p) => {
+			p.angle += p.speed * speedMult;
+
+			// Spiral formula: r increases with angle
+			const spiralOffset = (Math.PI * 2 / armCount) * p.armIndex + time * rotationSpeed;
+			const angle = p.angle + spiralOffset + p.distance * 0.008;
+
+			// Add some wobble
+			const wobble = Math.sin(time * 2 + p.distance * 0.05) * 5;
+
+			const x = centerX + Math.cos(angle) * (p.distance + wobble);
+			const y = centerY + Math.sin(angle) * (p.distance + wobble) * 0.7; // Flatten for perspective
+
+			// Brightness based on distance from center
+			const brightness = 1 - (p.distance / (Math.min(width, height) * 0.4)) * 0.5;
+
+			ctx.fillStyle = `rgba(60, 60, 60, ${opacity * brightness})`;
+			ctx.beginPath();
+			ctx.arc(x, y, p.size, 0, Math.PI * 2);
+			ctx.fill();
+		});
+
+		// Draw core glow
+		const coreGradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, 50);
+		coreGradient.addColorStop(0, `rgba(70, 70, 70, ${opacity * 1.5})`);
+		coreGradient.addColorStop(0.5, `rgba(70, 70, 70, ${opacity * 0.5})`);
+		coreGradient.addColorStop(1, 'rgba(70, 70, 70, 0)');
+		ctx.fillStyle = coreGradient;
+		ctx.beginPath();
+		ctx.arc(centerX, centerY, 50, 0, Math.PI * 2);
+		ctx.fill();
+	}
+
+	// ============================================
+	// 15. LIQUID LATTICE
+	// ============================================
+	function drawLiquidLattice(ctx: CanvasRenderingContext2D, nodes: LatticeNode[]) {
+		const opacity = 0.06 * opacityMultiplier * patternConfig.opacity;
+		const speedMult = patternConfig.speed;
+		const mouseMult = patternConfig.mouseInfluence;
+		const spacing = 60;
+
+		// Physics update
+		nodes.forEach((node) => {
+			// Spring force back to base position
+			const springK = 0.03 * speedMult;
+			const dx = node.baseX - node.x;
+			const dy = node.baseY - node.y;
+			node.vx += dx * springK;
+			node.vy += dy * springK;
+
+			// Mouse repulsion
+			const mx = mouseX * width;
+			const my = mouseY * height;
+			const mdx = node.x - mx;
+			const mdy = node.y - my;
+			const mdist = Math.sqrt(mdx * mdx + mdy * mdy);
+			const mouseRadius = 120 * mouseMult;
+
+			if (mdist < mouseRadius && mdist > 0) {
+				const force = ((mouseRadius - mdist) / mouseRadius) * 3 * mouseMult;
+				node.vx += (mdx / mdist) * force;
+				node.vy += (mdy / mdist) * force;
+			}
+
+			// Apply velocity with damping
+			node.x += node.vx;
+			node.y += node.vy;
+			node.vx *= 0.92;
+			node.vy *= 0.92;
+		});
+
+		// Draw connections between neighboring nodes
+		ctx.strokeStyle = `rgba(60, 60, 60, ${opacity})`;
+		ctx.lineWidth = 1;
+
+		const cols = Math.ceil(width / spacing) + 1;
+		const rows = Math.ceil(height / spacing) + 1;
+
+		for (let i = 0; i < nodes.length; i++) {
+			const col = Math.floor(i / rows);
+			const row = i % rows;
+			const node = nodes[i];
+
+			// Connect to right neighbor
+			if (col < cols - 1) {
+				const rightIndex = (col + 1) * rows + row;
+				if (rightIndex < nodes.length) {
+					const right = nodes[rightIndex];
+					const dist = Math.sqrt((node.x - right.x) ** 2 + (node.y - right.y) ** 2);
+					const stretch = dist / spacing;
+					const alpha = Math.max(0, Math.min(1, 2 - stretch)) * opacity;
+
+					ctx.globalAlpha = alpha;
+					ctx.beginPath();
+					ctx.moveTo(node.x, node.y);
+					ctx.lineTo(right.x, right.y);
+					ctx.stroke();
+				}
+			}
+
+			// Connect to bottom neighbor
+			if (row < rows - 1) {
+				const bottomIndex = col * rows + row + 1;
+				if (bottomIndex < nodes.length) {
+					const bottom = nodes[bottomIndex];
+					const dist = Math.sqrt((node.x - bottom.x) ** 2 + (node.y - bottom.y) ** 2);
+					const stretch = dist / spacing;
+					const alpha = Math.max(0, Math.min(1, 2 - stretch)) * opacity;
+
+					ctx.globalAlpha = alpha;
+					ctx.beginPath();
+					ctx.moveTo(node.x, node.y);
+					ctx.lineTo(bottom.x, bottom.y);
+					ctx.stroke();
+				}
+			}
+		}
+
+		// Draw nodes
+		ctx.globalAlpha = 1;
+		nodes.forEach((node) => {
+			// Displacement visualization
+			const dx = node.x - node.baseX;
+			const dy = node.y - node.baseY;
+			const displacement = Math.sqrt(dx * dx + dy * dy);
+			const intensity = Math.min(1, displacement / 30);
+
+			ctx.fillStyle = `rgba(60, 60, 60, ${opacity * (1 + intensity)})`;
+			ctx.beginPath();
+			ctx.arc(node.x, node.y, 2 + intensity * 2, 0, Math.PI * 2);
+			ctx.fill();
+		});
+	}
+
+	// Draw a specific style on a context
+	function drawStyle(ctx: CanvasRenderingContext2D, style: ArtStyle, particleList: Particle[], blobList: Blob[], seed: number) {
+		switch (style) {
+			case 'particles':
+				drawParticleNetwork(ctx, particleList, seed);
+				break;
+			case 'flow':
+				drawFlowField(ctx, seed);
+				break;
+			case 'gradient':
+				drawGradientMesh(ctx, blobList);
+				break;
+			case 'constellation':
+				drawConstellation(ctx, particleList);
+				break;
+			case 'ripple':
+				drawRipplePulse(ctx);
+				break;
+			case 'grid':
+				drawDotGrid(ctx);
+				break;
+			case 'voronoi':
+				drawVoronoi(ctx, voronoiSeeds);
+				break;
+			case 'waves':
+				drawWaveContours(ctx);
+				break;
+			case 'hexagon':
+				drawHexagonalGrid(ctx);
+				break;
+			case 'orbits':
+				drawOrbitingRings(ctx, orbitParticles);
+				break;
+			case 'bokeh':
+				drawBokehLights(ctx, bokehOrbs);
+				break;
+			case 'curves':
+				drawBezierCurves(ctx, seed);
+				break;
+			case 'magnetic':
+				drawMagneticField(ctx, magneticAttractors);
+				break;
+			case 'spiral':
+				drawSpiralGalaxy(ctx, spiralParticles);
+				break;
+			case 'lattice':
+				drawLiquidLattice(ctx, latticeNodes);
+				break;
+		}
+	}
+
+	// ============================================
+	// MAIN DRAW FUNCTION
+	// ============================================
+	function draw() {
+		if (!ctxCurrent || !browser) return;
+
+		// Update transition progress
+		if (isTransitioning) {
+			const elapsed = performance.now() - transitionStartTime;
+			transitionProgress = Math.min(1, elapsed / TRANSITION_DURATION);
+
+			// Ease out cubic for smoother transition
+			transitionProgress = 1 - Math.pow(1 - transitionProgress, 3);
+
+			if (transitionProgress >= 1) {
+				isTransitioning = false;
+				previousStyle = null;
+			}
+		}
+
+		// Clear current canvas with background color
+		ctxCurrent.fillStyle = '#f5f2eb';
+		ctxCurrent.fillRect(0, 0, width, height);
+
+		// If transitioning, draw previous style with fading opacity on previous canvas
+		if (isTransitioning && previousStyle && ctxPrevious) {
+			ctxPrevious.fillStyle = '#f5f2eb';
+			ctxPrevious.fillRect(0, 0, width, height);
+			drawStyle(ctxPrevious, previousStyle, particlesPrev, blobsPrev, artSeed - 1000);
+		}
+
+		// Draw current style
+		drawStyle(ctxCurrent, currentStyle, particles, blobs, artSeed);
+	}
+
+	// Performance: track visibility
+	let isVisible = $state(true);
+	let prefersReducedMotion = $state(false);
+
+	function animate() {
+		if (!isVisible || prefersReducedMotion) {
+			animationFrame = requestAnimationFrame(animate);
+			return;
+		}
+		time += 0.016;
+		draw();
+		animationFrame = requestAnimationFrame(animate);
+	}
+
+	function handleVisibilityChange() {
+		isVisible = !document.hidden;
+	}
+
+	// Initialize canvas when available
+	$effect(() => {
+		if (!browser || !canvasCurrent || animationStarted) return;
+
+		prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+		ctxCurrent = canvasCurrent.getContext('2d');
+		if (canvasPrevious) {
+			ctxPrevious = canvasPrevious.getContext('2d');
+		}
+		resizeCanvas();
+
+		if (prefersReducedMotion) {
+			draw();
+		}
+
+		animationStarted = true;
+		animate();
+	});
+
+	onMount(() => {
+		if (!browser) return;
+		window.addEventListener('resize', resizeCanvas);
+		document.addEventListener('visibilitychange', handleVisibilityChange);
+	});
+
+	onDestroy(() => {
+		if (!browser) return;
+		if (animationFrame !== undefined) {
+			cancelAnimationFrame(animationFrame);
+		}
+		window.removeEventListener('resize', resizeCanvas);
+		document.removeEventListener('visibilitychange', handleVisibilityChange);
+	});
+</script>
+
+{#if browser}
+	<!-- Previous canvas (for fade-out during transitions) -->
+	<canvas
+		bind:this={canvasPrevious}
+		class="immersive-bg previous"
+		class:transitioning={isTransitioning}
+		style:opacity={isTransitioning ? 1 - transitionProgress : 0}
+	></canvas>
+	<!-- Current canvas (main) -->
+	<canvas
+		bind:this={canvasCurrent}
+		class="immersive-bg current"
+		class:transitioning={isTransitioning}
+		style:opacity={isTransitioning ? transitionProgress : 1}
+	></canvas>
+
+	<!-- Opacity slider control -->
+	<div class="opacity-control" class:open={showOpacitySlider}>
+		<button
+			class="opacity-toggle"
+			onclick={() => (showOpacitySlider = !showOpacitySlider)}
+			aria-label="Toggle background opacity control"
+		>
+			<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+				<circle cx="12" cy="12" r="3"></circle>
+				<path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"></path>
+			</svg>
+		</button>
+		{#if showOpacitySlider}
+			<div class="slider-panel">
+				<label class="slider-label">
+					<span>Background: {Math.round(opacityMultiplier * 40)}%</span>
+					<input
+						type="range"
+						min="0"
+						max="5"
+						step="0.1"
+						bind:value={opacityMultiplier}
+					/>
+				</label>
+			</div>
+		{/if}
+	</div>
+{:else}
+	<div class="immersive-bg placeholder"></div>
+{/if}
+
+<style>
+	.immersive-bg {
+		position: fixed;
+		top: 0;
+		left: 0;
+		width: 100vw;
+		height: 100vh;
+		z-index: -1;
+		pointer-events: none;
+	}
+
+	.immersive-bg.previous {
+		z-index: -2;
+	}
+
+	.immersive-bg.current {
+		z-index: -1;
+	}
+
+	.immersive-bg.transitioning {
+		transition: opacity 0.1s linear;
+	}
+
+	.placeholder {
+		background: #f5f2eb;
+	}
+
+	/* Opacity slider control */
+	.opacity-control {
+		position: fixed;
+		bottom: 20px;
+		right: 20px;
+		z-index: 100;
+		display: flex;
+		flex-direction: column;
+		align-items: flex-end;
+		gap: 8px;
+	}
+
+	.opacity-toggle {
+		width: 36px;
+		height: 36px;
+		border-radius: 50%;
+		border: none;
+		background: rgba(255, 255, 255, 0.9);
+		box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+		cursor: pointer;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		color: #555;
+		transition: all 0.2s ease;
+	}
+
+	.opacity-toggle:hover {
+		background: rgba(255, 255, 255, 1);
+		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+		transform: scale(1.05);
+	}
+
+	.opacity-control.open .opacity-toggle {
+		background: #333;
+		color: white;
+	}
+
+	.slider-panel {
+		background: rgba(255, 255, 255, 0.95);
+		backdrop-filter: blur(10px);
+		border-radius: 12px;
+		padding: 12px 16px;
+		box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
+		min-width: 200px;
+	}
+
+	.slider-label {
+		display: flex;
+		flex-direction: column;
+		gap: 8px;
+		font-size: 12px;
+		color: #555;
+		font-weight: 500;
+	}
+
+	.slider-label input[type="range"] {
+		width: 100%;
+		height: 4px;
+		border-radius: 2px;
+		background: #ddd;
+		appearance: none;
+		cursor: pointer;
+	}
+
+	.slider-label input[type="range"]::-webkit-slider-thumb {
+		appearance: none;
+		width: 16px;
+		height: 16px;
+		border-radius: 50%;
+		background: #333;
+		cursor: pointer;
+		transition: transform 0.15s ease;
+	}
+
+	.slider-label input[type="range"]::-webkit-slider-thumb:hover {
+		transform: scale(1.2);
+	}
+
+	.slider-label input[type="range"]::-moz-range-thumb {
+		width: 16px;
+		height: 16px;
+		border-radius: 50%;
+		background: #333;
+		cursor: pointer;
+		border: none;
+	}
+</style>

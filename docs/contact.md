@@ -1,33 +1,73 @@
 # Contact
 
-## Direct Contact
-
-- **Email:** [ivankokalovic@protonmail.ch](mailto:ivankokalovic@protonmail.ch)
-- **LinkedIn:** [linkedin.com/in/kokalovic](https://www.linkedin.com/in/kokalovic/)
-- **GitHub:** [github.com/koke1997](https://github.com/koke1997)
-- **Location:** Bremen, Germany
+<div class="contact-header">
+  <p>I'm open to discussing new opportunities, collaborations, and interesting projects. Feel free to reach out through any of the channels below.</p>
+</div>
 
 ---
 
-## Contact Form
+## Get in Touch
 
-<form id="contact-form" class="contact-form">
-<div class="form-group required"><label for="contact-type">I'm interested in:</label><select id="contact-type" name="contact-type" required><option value="">-- Select Option --</option><option value="fulltime">Full-Time Job Offer</option><option value="freelance">Freelance Project</option><option value="consulting">Technical Consulting</option><option value="other">Other</option></select></div>
-<div class="form-group required"><label for="name">Your Name:</label><input type="text" id="name" name="name" required></div>
-<div class="form-group required"><label for="email">Your Email:</label><input type="email" id="email" name="email" required></div>
-<div class="form-group required"><label for="company">Company:</label><input type="text" id="company" name="company" required></div>
-<div id="salary-section" style="display:none;"><h3>Position Details</h3><div class="form-group required"><label for="position">Position Title:</label><input type="text" id="position" name="position"></div><div class="form-group required"><label for="salary-range">Annual Salary Range (EUR):</label><select id="salary-range" name="salary-range"><option value="">-- Select Range --</option><option value="70k-85k">€70,000 - €85,000</option><option value="85k-100k">€85,000 - €100,000</option><option value="100k-120k">€100,000 - €120,000</option><option value="120k-140k">€120,000 - €140,000</option><option value="140k+">€140,000+</option></select><p class="hint">Minimum €70,000 for full-time positions</p></div><div class="form-group"><label for="remote-policy">Remote Work Policy:</label><select id="remote-policy" name="remote-policy"><option value="">-- Select --</option><option value="fully-remote">Fully Remote</option><option value="hybrid">Hybrid</option><option value="onsite">On-Site</option></select></div></div>
-<div id="freelance-section" style="display:none;"><h3>Project Details</h3><div class="form-group required"><label for="project-type">Project Type:</label><select id="project-type" name="project-type"><option value="">-- Select --</option><option value="backend">Backend Development</option><option value="devops">DevOps / Infrastructure</option><option value="consulting">Technical Consulting</option><option value="other">Other</option></select></div><div class="form-group required"><label for="project-budget">Budget (EUR):</label><select id="project-budget" name="project-budget"><option value="">-- Select Range --</option><option value="under-5k">Under €5,000</option><option value="5k-10k">€5,000 - €10,000</option><option value="10k-25k">€10,000 - €25,000</option><option value="25k+">€25,000+</option><option value="hourly">Hourly Rate</option></select></div></div>
-<div class="form-group required"><label for="message">Message:</label><textarea id="message" name="message" rows="6" required placeholder="Describe the opportunity..."></textarea></div>
-<button type="submit" class="submit-btn" id="submit-btn">Send Message</button>
-</form>
+<div class="contact-methods">
+  <a href="mailto:ivankokalovic@protonmail.ch" class="contact-method">
+    <span class="method-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="currentColor" d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2m0 4l-8 5l-8-5V6l8 5l8-5v2Z"/></svg></span>
+    <div>
+      <span class="method-label">Email</span>
+      <span class="method-value">ivankokalovic@protonmail.ch</span>
+    </div>
+  </a>
+  <a href="https://www.linkedin.com/in/kokalovic/" class="contact-method" target="_blank">
+    <span class="method-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="currentColor" d="M19 3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14m-.5 15.5v-5.3a3.26 3.26 0 0 0-3.26-3.26c-.85 0-1.84.52-2.32 1.3v-1.11h-2.79v8.37h2.79v-4.93c0-.77.62-1.4 1.39-1.4a1.4 1.4 0 0 1 1.4 1.4v4.93h2.79M6.88 8.56a1.68 1.68 0 0 0 1.68-1.68c0-.93-.75-1.69-1.68-1.69a1.69 1.69 0 0 0-1.69 1.69c0 .93.76 1.68 1.69 1.68m1.39 9.94v-8.37H5.5v8.37h2.77Z"/></svg></span>
+    <div>
+      <span class="method-label">LinkedIn</span>
+      <span class="method-value">kokalovic</span>
+    </div>
+  </a>
+  <a href="https://github.com/koke1997" class="contact-method" target="_blank">
+    <span class="method-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="currentColor" d="M12 2A10 10 0 0 0 2 12c0 4.42 2.87 8.17 6.84 9.5c.5.08.66-.23.66-.5v-1.69c-2.77.6-3.36-1.34-3.36-1.34c-.46-1.16-1.11-1.47-1.11-1.47c-.91-.62.07-.6.07-.6c1 .07 1.53 1.03 1.53 1.03c.87 1.52 2.34 1.07 2.91.83c.09-.65.35-1.09.63-1.34c-2.22-.25-4.55-1.11-4.55-4.92c0-1.11.38-2 1.03-2.71c-.1-.25-.45-1.29.1-2.64c0 0 .84-.27 2.75 1.02c.79-.22 1.65-.33 2.5-.33c.85 0 1.71.11 2.5.33c1.91-1.29 2.75-1.02 2.75-1.02c.55 1.35.2 2.39.1 2.64c.65.71 1.03 1.6 1.03 2.71c0 3.82-2.34 4.66-4.57 4.91c.36.31.69.92.69 1.85V21c0 .27.16.59.67.5C19.14 20.16 22 16.42 22 12A10 10 0 0 0 12 2Z"/></svg></span>
+    <div>
+      <span class="method-label">GitHub</span>
+      <span class="method-value">koke1997</span>
+    </div>
+  </a>
+  <div class="contact-method">
+    <span class="method-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="currentColor" d="M12 11.5A2.5 2.5 0 0 1 9.5 9A2.5 2.5 0 0 1 12 6.5A2.5 2.5 0 0 1 14.5 9a2.5 2.5 0 0 1-2.5 2.5M12 2a7 7 0 0 0-7 7c0 5.25 7 13 7 13s7-7.75 7-13a7 7 0 0 0-7-7Z"/></svg></span>
+    <div>
+      <span class="method-label">Location</span>
+      <span class="method-value">Bremen, Germany</span>
+    </div>
+  </div>
+</div>
 
 ---
 
-## Languages
+## Languages Spoken
 
-German, English, Croatian, Serbian (fluent) • Slovenian (working) • Spanish (basic)
+<div class="language-grid" style="margin-top: 1rem;">
+  <div class="language-card certified">
+    <span class="language-flag">DE</span>
+    <span class="language-name">German</span>
+    <span class="language-level">C2 Certified</span>
+  </div>
+  <div class="language-card certified">
+    <span class="language-flag">EN</span>
+    <span class="language-name">English</span>
+    <span class="language-level">C2 Certified</span>
+  </div>
+  <div class="language-card">
+    <span class="language-flag">HR</span>
+    <span class="language-name">Croatian</span>
+    <span class="language-level">Native</span>
+  </div>
+  <div class="language-card">
+    <span class="language-flag">RS</span>
+    <span class="language-name">Serbian</span>
+    <span class="language-level">Native</span>
+  </div>
+</div>
 
 ---
 
-I typically respond within 24-48 hours on business days.
+<div class="download-meta">
+  <p>I typically respond within 24-48 hours on business days.</p>
+</div>

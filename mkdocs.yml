@@ -1,5 +1,5 @@
 site_name: Ivan Kokalović - CV
-site_description: Professional CV and Portfolio of Ivan Kokalović
+site_description: Backend Developer & Infrastructure Engineer | Java, Terraform, Docker
 site_author: Ivan Kokalović
 site_url: https://koke1997.github.io/cv-website/
 use_directory_urls: true
@@ -10,20 +10,20 @@ theme:
     # Light mode
     - media: "(prefers-color-scheme: light)"
       scheme: default
-      primary: blue
-      accent: indigo
+      primary: custom
+      accent: custom
       toggle:
         icon: material/brightness-7
         name: Switch to dark mode
     # Dark mode
     - media: "(prefers-color-scheme: dark)"
       scheme: slate
-      primary: blue
-      accent: indigo
+      primary: custom
+      accent: custom
       toggle:
         icon: material/brightness-4
         name: Switch to light mode
-  
+
   features:
     - navigation.instant
     - navigation.tracking
@@ -31,15 +31,18 @@ theme:
     - navigation.sections
     - navigation.expand
     - navigation.top
+    - navigation.footer
+    - content.tabs.link
+    - toc.follow
     - search.suggest
     - search.highlight
     - content.code.copy
     - content.code.annotate
-  
+
   font:
-    text: Roboto
-    code: Roboto Mono
-  
+    text: Source Sans 3
+    code: JetBrains Mono
+
   icon:
     repo: fontawesome/brands/github
 
@@ -49,7 +52,8 @@ repo_name: koke1997
 nav:
   - Home: index.md
   - CV: cv.md
-  - Download PDF: download.md
+  - Creative: creative.md
+  - Download: download.md
   - Contact: contact.md
 
 markdown_extensions:
@@ -71,6 +75,10 @@ markdown_extensions:
       alternate_style: true
   - tables
   - footnotes
+  - def_list
+  - abbr
+  - pymdownx.tasklist:
+      custom_checkbox: true
   - pymdownx.emoji:
       emoji_index: !!python/name:material.extensions.emoji.twemoji
       emoji_generator: !!python/name:material.extensions.emoji.to_svg
@@ -87,14 +95,14 @@ extra:
     - icon: fontawesome/brands/github
       link: https://github.com/koke1997
       name: GitHub Profile
+    - icon: fontawesome/brands/soundcloud
+      link: https://soundcloud.com/kokeivanov
+      name: SoundCloud
     - icon: fontawesome/solid/envelope
       link: mailto:ivankokalovic@protonmail.ch
       name: Email
 
 extra_css:
   - stylesheets/extra.css
-
-extra_javascript:
-  - javascripts/contact-form.js
 
 copyright: Copyright &copy; 2026 Ivan Kokalović
