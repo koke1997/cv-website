@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount, onDestroy } from 'svelte';
 	import { browser } from '$app/environment';
-	import { creativeChapter, patternConfig as patternConfigStore, type PatternConfig } from '$lib/stores/creative';
+	import { creativeChapter, patternConfig as patternConfigStore, selectedPattern as selectedPatternStore, type PatternConfig, type ArtPatternId } from '$lib/stores/creative';
 
 	interface Props {
 		currentRoute?: string;
@@ -29,10 +29,22 @@
 	let width = 0;
 	let height = 0;
 
-	// Art style types (15 total)
+	// Art style types (20 total)
 	type ArtStyle = 'particles' | 'flow' | 'gradient' | 'constellation' | 'ripple' | 'grid' |
 		'voronoi' | 'waves' | 'hexagon' | 'orbits' | 'bokeh' | 'curves' |
-		'magnetic' | 'spiral' | 'lattice';
+		'magnetic' | 'spiral' | 'lattice' | 'aurora' | 'rain' | 'circuit' | 'plasma' | 'noise';
+
+	// Subscribe to selectedPattern store for manual override
+	let selectedPatternOverride = $state<ArtPatternId | null>(null);
+	if (browser) {
+		selectedPatternStore.subscribe((value) => {
+			selectedPatternOverride = value;
+			// When user selects a pattern, trigger a transition
+			if (value && value !== currentStyle) {
+				startTransition(value as ArtStyle);
+			}
+		});
+	}
 
 	// Subscribe to pattern config store
 	let patternConfig = $state<PatternConfig>({
@@ -61,12 +73,12 @@
 		return map[route] || 'particles';
 	}
 
-	// For Creative page, map chapters to different styles (all 15 patterns)
+	// For Creative page, map chapters to different styles (all 20 patterns)
 	function getCreativeChapterStyle(chapter: number): ArtStyle {
 		const styles: ArtStyle[] = [
 			'particles', 'flow', 'gradient', 'constellation', 'ripple', 'grid',
 			'voronoi', 'waves', 'hexagon', 'orbits', 'bokeh', 'curves',
-			'magnetic', 'spiral', 'lattice'
+			'magnetic', 'spiral', 'lattice', 'aurora', 'rain', 'circuit', 'plasma', 'noise'
 		];
 		return styles[(chapter - 1) % styles.length];
 	}
@@ -361,8 +373,11 @@
 		transitionStartTime = performance.now();
 	}
 
-	// When route changes, update art style and start transition
+	// When route changes, update art style and start transition (unless manual override is set)
 	$effect(() => {
+		// If user has selected a pattern manually, don't change on route changes
+		if (selectedPatternOverride) return;
+
 		const isFirstRender = previousRoute === null;
 		const routeChanged = currentRoute !== previousRoute;
 
@@ -386,8 +401,9 @@
 		}
 	});
 
-	// Also react to chapter changes on creative page
+	// Also react to chapter changes on creative page (unless manual override is set)
 	$effect(() => {
+		if (selectedPatternOverride) return;
 		if (currentRoute === '/creative') {
 			const newStyle = getCreativeChapterStyle(storeChapter);
 			if (newStyle !== currentStyle && !isTransitioning) {
@@ -443,6 +459,23 @@
 				break;
 			case 'lattice':
 				latticeNodes = initLatticeNodes(artSeed);
+				break;
+			case 'aurora':
+				// Aurora doesn't need state init (calculated on-the-fly)
+				break;
+			case 'rain':
+				// Reset rain drops - will be reinitialized in draw function
+				rainDrops = [];
+				break;
+			case 'circuit':
+				// Reset circuit nodes - will be reinitialized in draw function
+				circuitNodes = [];
+				break;
+			case 'plasma':
+				// Plasma doesn't need state init (calculated on-the-fly)
+				break;
+			case 'noise':
+				// Perlin noise doesn't need state init (calculated on-the-fly)
 				break;
 		}
 	}
@@ -1396,6 +1429,456 @@
 		});
 	}
 
+	// ============================================
+	// 16. AURORA BOREALIS
+	// ============================================
+	function drawAuroraBorealis(ctx: CanvasRenderingContext2D, seed: number) {
+		const opacity = 0.08 * opacityMultiplier * patternConfig.opacity;
+		const speedMult = patternConfig.speed;
+		const mouseMult = patternConfig.mouseInfluence;
+		const bandCount = 5;
+
+		// Mouse influence on aurora center
+		const mouseOffsetX = (mouseX - 0.5) * 200 * mouseMult;
+
+		// Draw flowing aurora bands
+		for (let band = 0; band < bandCount; band++) {
+			const baseY = height * 0.15 + band * 40;
+			const hue = 120 + band * 30; // Green to cyan spectrum
+
+			ctx.beginPath();
+
+			// Create flowing wave path
+			const points: { x: number; y: number }[] = [];
+			for (let x = -50; x <= width + 50; x += 10) {
+				const wave1 = Math.sin((x * 0.005 + time * 0.3 * speedMult + band * 0.5)) * 40;
+				const wave2 = Math.sin((x * 0.008 + time * 0.2 * speedMult - band * 0.3)) * 25;
+				const wave3 = Math.sin((x * 0.015 + time * 0.5 * speedMult)) * 15;
+
+				// Add mouse distortion
+				const dx = (x - mouseX * width - mouseOffsetX) / width;
+				const mouseWave = Math.exp(-dx * dx * 4) * 50 * mouseMult;
+
+				const y = baseY + wave1 + wave2 + wave3 + mouseWave;
+				points.push({ x, y });
+			}
+
+			// Draw the band as a gradient shape
+			ctx.moveTo(points[0].x, points[0].y);
+			for (let i = 1; i < points.length; i++) {
+				ctx.lineTo(points[i].x, points[i].y);
+			}
+
+			// Close the path to make a filled shape
+			ctx.lineTo(width + 50, 0);
+			ctx.lineTo(-50, 0);
+			ctx.closePath();
+
+			// Create vertical gradient for aurora effect
+			const gradient = ctx.createLinearGradient(0, 0, 0, baseY + 100);
+			gradient.addColorStop(0, `rgba(60, 80, 60, 0)`);
+			gradient.addColorStop(0.5, `rgba(60, 80, 60, ${opacity * 0.5})`);
+			gradient.addColorStop(1, `rgba(60, 80, 60, ${opacity})`);
+
+			ctx.fillStyle = gradient;
+			ctx.fill();
+		}
+
+		// Add vertical ray effects
+		const rayCount = 15;
+		ctx.globalAlpha = opacity * 0.3;
+		for (let r = 0; r < rayCount; r++) {
+			const x = (width / rayCount) * r + Math.sin(time * 0.5 * speedMult + r) * 30 + mouseOffsetX * 0.3;
+			const rayHeight = height * 0.4 + Math.sin(time * speedMult + r * 0.7) * height * 0.1;
+
+			const rayGradient = ctx.createLinearGradient(x, 0, x, rayHeight);
+			rayGradient.addColorStop(0, `rgba(60, 70, 60, 0)`);
+			rayGradient.addColorStop(0.3, `rgba(60, 70, 60, ${opacity * 0.3})`);
+			rayGradient.addColorStop(1, `rgba(60, 70, 60, 0)`);
+
+			ctx.fillStyle = rayGradient;
+			ctx.fillRect(x - 2, 0, 4, rayHeight);
+		}
+
+		ctx.globalAlpha = 1;
+	}
+
+	// ============================================
+	// 17. MATRIX RAIN
+	// ============================================
+	// Matrix rain state
+	interface RainDrop {
+		x: number;
+		y: number;
+		speed: number;
+		chars: string[];
+		length: number;
+	}
+	let rainDrops: RainDrop[] = [];
+
+	function initRainDrops(seed: number): RainDrop[] {
+		const rand = createRandom(seed);
+		const result: RainDrop[] = [];
+		const chars = '01アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヲン';
+		const colCount = Math.ceil(width / 20);
+
+		for (let i = 0; i < colCount; i++) {
+			const dropChars: string[] = [];
+			const length = Math.floor(rand() * 15) + 5;
+			for (let j = 0; j < length; j++) {
+				dropChars.push(chars[Math.floor(rand() * chars.length)]);
+			}
+
+			result.push({
+				x: i * 20 + 10,
+				y: rand() * height - height,
+				speed: rand() * 3 + 2,
+				chars: dropChars,
+				length
+			});
+		}
+		return result;
+	}
+
+	function drawMatrixRain(ctx: CanvasRenderingContext2D, seed: number) {
+		const opacity = 0.1 * opacityMultiplier * patternConfig.opacity;
+		const speedMult = patternConfig.speed;
+		const mouseMult = patternConfig.mouseInfluence;
+		const charSize = 14;
+
+		// Initialize rain drops if needed
+		if (rainDrops.length === 0 || Math.abs(rainDrops[0]?.x - 10) > 5) {
+			rainDrops = initRainDrops(seed);
+		}
+
+		ctx.font = `${charSize}px monospace`;
+		ctx.textAlign = 'center';
+
+		// Update and draw drops
+		rainDrops.forEach((drop) => {
+			// Mouse influence - slow down near cursor
+			const dx = Math.abs(drop.x - mouseX * width);
+			const mouseSlowdown = dx < 100 ? (1 - (100 - dx) / 100 * 0.5 * mouseMult) : 1;
+
+			drop.y += drop.speed * speedMult * mouseSlowdown;
+
+			// Reset when off screen
+			if (drop.y > height + drop.length * charSize) {
+				drop.y = -drop.length * charSize;
+				// Randomize characters
+				const chars = '01アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヲン';
+				for (let i = 0; i < drop.chars.length; i++) {
+					if (Math.random() < 0.1) {
+						drop.chars[i] = chars[Math.floor(Math.random() * chars.length)];
+					}
+				}
+			}
+
+			// Draw characters with fade effect
+			drop.chars.forEach((char, i) => {
+				const y = drop.y + i * charSize;
+				if (y < 0 || y > height) return;
+
+				// Fade from bright (head) to dim (tail)
+				const fadeProgress = i / drop.chars.length;
+				const charOpacity = (1 - fadeProgress) * opacity;
+
+				// Head character is brightest
+				if (i === 0) {
+					ctx.fillStyle = `rgba(40, 40, 40, ${charOpacity * 2})`;
+				} else {
+					ctx.fillStyle = `rgba(60, 60, 60, ${charOpacity})`;
+				}
+
+				ctx.fillText(char, drop.x, y);
+			});
+		});
+	}
+
+	// ============================================
+	// 18. CIRCUIT BOARD
+	// ============================================
+	interface CircuitNode {
+		x: number;
+		y: number;
+		connections: number[];
+		type: 'chip' | 'resistor' | 'capacitor' | 'junction';
+	}
+	let circuitNodes: CircuitNode[] = [];
+
+	function initCircuitNodes(seed: number): CircuitNode[] {
+		const rand = createRandom(seed);
+		const result: CircuitNode[] = [];
+		const gridSize = 80;
+		const cols = Math.ceil(width / gridSize);
+		const rows = Math.ceil(height / gridSize);
+		const types: CircuitNode['type'][] = ['chip', 'resistor', 'capacitor', 'junction'];
+
+		// Create nodes on a grid with some randomness
+		for (let i = 0; i < cols; i++) {
+			for (let j = 0; j < rows; j++) {
+				if (rand() > 0.6) continue; // Skip some positions
+
+				const nodeIndex = result.length;
+				result.push({
+					x: i * gridSize + gridSize / 2 + (rand() - 0.5) * 20,
+					y: j * gridSize + gridSize / 2 + (rand() - 0.5) * 20,
+					connections: [],
+					type: types[Math.floor(rand() * types.length)]
+				});
+
+				// Connect to nearby existing nodes
+				result.forEach((other, idx) => {
+					if (idx === nodeIndex) return;
+					const dist = Math.sqrt((result[nodeIndex].x - other.x) ** 2 + (result[nodeIndex].y - other.y) ** 2);
+					if (dist < gridSize * 1.5 && rand() > 0.5) {
+						result[nodeIndex].connections.push(idx);
+					}
+				});
+			}
+		}
+		return result;
+	}
+
+	function drawCircuitBoard(ctx: CanvasRenderingContext2D, seed: number) {
+		const opacity = 0.08 * opacityMultiplier * patternConfig.opacity;
+		const speedMult = patternConfig.speed;
+		const mouseMult = patternConfig.mouseInfluence;
+
+		// Initialize nodes if needed
+		if (circuitNodes.length === 0) {
+			circuitNodes = initCircuitNodes(seed);
+		}
+
+		// Draw traces (connections) first
+		ctx.strokeStyle = `rgba(60, 60, 60, ${opacity})`;
+		ctx.lineWidth = 2;
+
+		circuitNodes.forEach((node) => {
+			node.connections.forEach((targetIdx) => {
+				const target = circuitNodes[targetIdx];
+				if (!target) return;
+
+				// Draw right-angle traces (like real PCB)
+				ctx.beginPath();
+				ctx.moveTo(node.x, node.y);
+
+				// Decide whether to go horizontal-then-vertical or vice versa
+				const midX = (node.x + target.x) / 2;
+
+				// Pulse effect based on time
+				const pulsePos = (time * speedMult * 50) % 100 / 100;
+				const px = node.x + (target.x - node.x) * pulsePos;
+				const py = node.y + (target.y - node.y) * pulsePos;
+
+				if (Math.abs(node.x - target.x) > Math.abs(node.y - target.y)) {
+					ctx.lineTo(midX, node.y);
+					ctx.lineTo(midX, target.y);
+				} else {
+					ctx.lineTo(node.x, (node.y + target.y) / 2);
+					ctx.lineTo(target.x, (node.y + target.y) / 2);
+				}
+				ctx.lineTo(target.x, target.y);
+				ctx.stroke();
+
+				// Draw pulse traveling along trace
+				const mouseDist = Math.sqrt((px - mouseX * width) ** 2 + (py - mouseY * height) ** 2);
+				const pulseGlow = mouseDist < 100 ? (100 - mouseDist) / 100 * mouseMult : 0;
+
+				ctx.fillStyle = `rgba(50, 50, 50, ${opacity * (1 + pulseGlow * 2)})`;
+				ctx.beginPath();
+				ctx.arc(px, py, 3 + pulseGlow * 3, 0, Math.PI * 2);
+				ctx.fill();
+			});
+		});
+
+		// Draw nodes based on type
+		circuitNodes.forEach((node) => {
+			// Mouse proximity glow
+			const dx = node.x - mouseX * width;
+			const dy = node.y - mouseY * height;
+			const dist = Math.sqrt(dx * dx + dy * dy);
+			const glow = dist < 80 ? (80 - dist) / 80 * mouseMult : 0;
+
+			ctx.fillStyle = `rgba(50, 50, 50, ${opacity * (1.5 + glow)})`;
+			ctx.strokeStyle = `rgba(60, 60, 60, ${opacity})`;
+			ctx.lineWidth = 1;
+
+			switch (node.type) {
+				case 'chip':
+					// Rectangle with pins
+					ctx.fillRect(node.x - 12, node.y - 8, 24, 16);
+					// Draw pins
+					for (let p = 0; p < 3; p++) {
+						ctx.fillRect(node.x - 10 + p * 8, node.y - 12, 2, 4);
+						ctx.fillRect(node.x - 10 + p * 8, node.y + 8, 2, 4);
+					}
+					break;
+				case 'resistor':
+					// Zigzag pattern
+					ctx.beginPath();
+					ctx.moveTo(node.x - 10, node.y);
+					ctx.lineTo(node.x - 6, node.y - 4);
+					ctx.lineTo(node.x - 2, node.y + 4);
+					ctx.lineTo(node.x + 2, node.y - 4);
+					ctx.lineTo(node.x + 6, node.y + 4);
+					ctx.lineTo(node.x + 10, node.y);
+					ctx.stroke();
+					break;
+				case 'capacitor':
+					// Two parallel lines
+					ctx.beginPath();
+					ctx.moveTo(node.x - 2, node.y - 6);
+					ctx.lineTo(node.x - 2, node.y + 6);
+					ctx.moveTo(node.x + 2, node.y - 6);
+					ctx.lineTo(node.x + 2, node.y + 6);
+					ctx.stroke();
+					break;
+				case 'junction':
+					// Simple dot
+					ctx.beginPath();
+					ctx.arc(node.x, node.y, 4 + glow * 2, 0, Math.PI * 2);
+					ctx.fill();
+					break;
+			}
+		});
+	}
+
+	// ============================================
+	// 19. PLASMA WAVE
+	// ============================================
+	function drawPlasmaWave(ctx: CanvasRenderingContext2D, seed: number) {
+		const opacity = 0.06 * opacityMultiplier * patternConfig.opacity;
+		const speedMult = patternConfig.speed;
+		const mouseMult = patternConfig.mouseInfluence;
+		const resolution = 8; // Pixel size for performance
+
+		// Plasma formula using multiple sine waves
+		for (let x = 0; x < width; x += resolution) {
+			for (let y = 0; y < height; y += resolution) {
+				const nx = x / width;
+				const ny = y / height;
+
+				// Multiple wave interference
+				const wave1 = Math.sin(nx * 10 + time * speedMult);
+				const wave2 = Math.sin(ny * 8 + time * 0.8 * speedMult);
+				const wave3 = Math.sin((nx + ny) * 6 + time * 0.6 * speedMult);
+				const wave4 = Math.sin(Math.sqrt((nx - 0.5) ** 2 + (ny - 0.5) ** 2) * 15 + time * 1.2 * speedMult);
+
+				// Mouse influence - create ripple
+				const dx = nx - mouseX;
+				const dy = ny - mouseY;
+				const mouseDist = Math.sqrt(dx * dx + dy * dy);
+				const mouseWave = Math.sin(mouseDist * 20 - time * 3 * speedMult) * mouseMult * (1 - mouseDist);
+
+				// Combine waves
+				const value = (wave1 + wave2 + wave3 + wave4 + mouseWave) / 5;
+
+				// Map to grayscale intensity
+				const intensity = (value + 1) / 2; // 0 to 1
+				const gray = Math.floor(50 + intensity * 30);
+
+				ctx.fillStyle = `rgba(${gray}, ${gray}, ${gray}, ${opacity * (0.5 + intensity * 0.5)})`;
+				ctx.fillRect(x, y, resolution, resolution);
+			}
+		}
+	}
+
+	// ============================================
+	// 20. PERLIN NOISE (Smooth Terrain)
+	// ============================================
+	// Improved noise function for smoother results
+	function smoothNoise(x: number, y: number, seed: number): number {
+		const ix = Math.floor(x);
+		const iy = Math.floor(y);
+		const fx = x - ix;
+		const fy = y - iy;
+
+		// Smoothstep interpolation
+		const sx = fx * fx * (3 - 2 * fx);
+		const sy = fy * fy * (3 - 2 * fy);
+
+		const rand = createRandom(seed);
+		const n00 = createRandom(ix * 374761393 + iy * 668265263 + seed)() * 2 - 1;
+		const n10 = createRandom((ix + 1) * 374761393 + iy * 668265263 + seed)() * 2 - 1;
+		const n01 = createRandom(ix * 374761393 + (iy + 1) * 668265263 + seed)() * 2 - 1;
+		const n11 = createRandom((ix + 1) * 374761393 + (iy + 1) * 668265263 + seed)() * 2 - 1;
+
+		const nx0 = n00 * (1 - sx) + n10 * sx;
+		const nx1 = n01 * (1 - sx) + n11 * sx;
+
+		return nx0 * (1 - sy) + nx1 * sy;
+	}
+
+	function fractalNoise(x: number, y: number, seed: number, octaves: number = 4): number {
+		let value = 0;
+		let amplitude = 1;
+		let frequency = 1;
+		let maxValue = 0;
+
+		for (let i = 0; i < octaves; i++) {
+			value += smoothNoise(x * frequency, y * frequency, seed) * amplitude;
+			maxValue += amplitude;
+			amplitude *= 0.5;
+			frequency *= 2;
+		}
+
+		return value / maxValue;
+	}
+
+	function drawPerlinNoise(ctx: CanvasRenderingContext2D, seed: number) {
+		const opacity = 0.08 * opacityMultiplier * patternConfig.opacity;
+		const speedMult = patternConfig.speed;
+		const mouseMult = patternConfig.mouseInfluence;
+		const resolution = 6;
+		const scale = 0.008;
+
+		// Draw noise field as contour-like visualization
+		const contourLevels = 8;
+
+		for (let x = 0; x < width; x += resolution) {
+			for (let y = 0; y < height; y += resolution) {
+				// Animated noise
+				const nx = x * scale + time * 0.1 * speedMult;
+				const ny = y * scale + time * 0.05 * speedMult;
+
+				// Mouse creates distortion
+				const dx = (x - mouseX * width) / width;
+				const dy = (y - mouseY * height) / height;
+				const mouseDist = Math.sqrt(dx * dx + dy * dy);
+				const mouseDistort = Math.exp(-mouseDist * 3) * 0.3 * mouseMult;
+
+				const noiseValue = fractalNoise(nx + mouseDistort * dx, ny + mouseDistort * dy, seed);
+
+				// Quantize to contour levels
+				const level = Math.floor((noiseValue + 1) / 2 * contourLevels);
+				const normalizedLevel = level / contourLevels;
+
+				// Draw with varying intensity
+				const gray = 50 + normalizedLevel * 30;
+				const alpha = opacity * (0.3 + normalizedLevel * 0.7);
+
+				ctx.fillStyle = `rgba(${gray}, ${gray}, ${gray}, ${alpha})`;
+				ctx.fillRect(x, y, resolution, resolution);
+
+				// Draw contour lines (edges between levels)
+				if (x > 0 && y > 0) {
+					const prevXNoise = fractalNoise((x - resolution) * scale + time * 0.1 * speedMult, ny, seed);
+					const prevYNoise = fractalNoise(nx, (y - resolution) * scale + time * 0.05 * speedMult, seed);
+
+					const prevXLevel = Math.floor((prevXNoise + 1) / 2 * contourLevels);
+					const prevYLevel = Math.floor((prevYNoise + 1) / 2 * contourLevels);
+
+					// If there's a level change, draw a contour line
+					if (prevXLevel !== level || prevYLevel !== level) {
+						ctx.fillStyle = `rgba(40, 40, 40, ${opacity * 1.5})`;
+						ctx.fillRect(x, y, resolution, resolution);
+					}
+				}
+			}
+		}
+	}
+
 	// Draw a specific style on a context
 	function drawStyle(ctx: CanvasRenderingContext2D, style: ArtStyle, particleList: Particle[], blobList: Blob[], seed: number) {
 		switch (style) {
@@ -1443,6 +1926,21 @@
 				break;
 			case 'lattice':
 				drawLiquidLattice(ctx, latticeNodes);
+				break;
+			case 'aurora':
+				drawAuroraBorealis(ctx, seed);
+				break;
+			case 'rain':
+				drawMatrixRain(ctx, seed);
+				break;
+			case 'circuit':
+				drawCircuitBoard(ctx, seed);
+				break;
+			case 'plasma':
+				drawPlasmaWave(ctx, seed);
+				break;
+			case 'noise':
+				drawPerlinNoise(ctx, seed);
 				break;
 		}
 	}

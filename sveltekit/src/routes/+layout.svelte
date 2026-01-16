@@ -5,6 +5,7 @@
 	import ImmersiveBackground from '$lib/components/creative/ImmersiveBackground.svelte';
 	import PatternConfigPanel from '$lib/components/creative/PatternConfigPanel.svelte';
 	import { page } from '$app/stores';
+	import { base } from '$app/paths';
 	import { browser } from '$app/environment';
 
 	let { children } = $props();
@@ -18,6 +19,17 @@
 		mouseX = e.clientX / window.innerWidth;
 		mouseY = e.clientY / window.innerHeight;
 	}
+
+	// Derive the clean route path (strip base path for pattern detection)
+	let currentRoute = $derived(() => {
+		const pathname = $page.url.pathname;
+		// Strip the base path to get the actual route
+		if (base && pathname.startsWith(base)) {
+			const route = pathname.slice(base.length) || '/';
+			return route;
+		}
+		return pathname || '/';
+	});
 </script>
 
 <svelte:head>
@@ -25,7 +37,7 @@
 </svelte:head>
 
 <!-- Global generative art background -->
-<ImmersiveBackground currentRoute={$page.url.pathname} {mouseX} {mouseY} />
+<ImmersiveBackground currentRoute={currentRoute()} {mouseX} {mouseY} />
 
 <!-- Pattern configuration panel (floating gear icon) -->
 <PatternConfigPanel />

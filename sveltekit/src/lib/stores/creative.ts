@@ -66,3 +66,69 @@ function createPatternConfigStore() {
 }
 
 export const patternConfig = createPatternConfigStore();
+
+// All available art patterns (20 total)
+export const ART_PATTERNS = [
+	{ id: 'particles', name: 'Particle Network', icon: '✨' },
+	{ id: 'flow', name: 'Flow Field', icon: '🌊' },
+	{ id: 'gradient', name: 'Gradient Mesh', icon: '🎨' },
+	{ id: 'constellation', name: 'Constellation', icon: '⭐' },
+	{ id: 'ripple', name: 'Ripple Pulse', icon: '💫' },
+	{ id: 'grid', name: 'Dot Grid', icon: '📍' },
+	{ id: 'voronoi', name: 'Voronoi Cells', icon: '🔷' },
+	{ id: 'waves', name: 'Wave Contours', icon: '〰️' },
+	{ id: 'hexagon', name: 'Hexagonal Grid', icon: '⬡' },
+	{ id: 'orbits', name: 'Orbiting Rings', icon: '🪐' },
+	{ id: 'bokeh', name: 'Bokeh Lights', icon: '💡' },
+	{ id: 'curves', name: 'Bezier Curves', icon: '🎭' },
+	{ id: 'magnetic', name: 'Magnetic Field', icon: '🧲' },
+	{ id: 'spiral', name: 'Spiral Galaxy', icon: '🌀' },
+	{ id: 'lattice', name: 'Liquid Lattice', icon: '🔗' },
+	{ id: 'aurora', name: 'Aurora Borealis', icon: '🌈' },
+	{ id: 'rain', name: 'Matrix Rain', icon: '🌧️' },
+	{ id: 'circuit', name: 'Circuit Board', icon: '💻' },
+	{ id: 'plasma', name: 'Plasma Wave', icon: '⚡' },
+	{ id: 'noise', name: 'Perlin Noise', icon: '🌫️' }
+] as const;
+
+export type ArtPatternId = typeof ART_PATTERNS[number]['id'];
+
+// Selected pattern override (null = use route-based selection)
+function loadSelectedPattern(): ArtPatternId | null {
+	if (!browser) return null;
+	try {
+		const saved = localStorage.getItem('selectedPattern');
+		if (saved && ART_PATTERNS.some(p => p.id === saved)) {
+			return saved as ArtPatternId;
+		}
+	} catch (e) {
+		console.warn('Failed to load selected pattern from localStorage:', e);
+	}
+	return null;
+}
+
+function createSelectedPatternStore() {
+	const { subscribe, set } = writable<ArtPatternId | null>(loadSelectedPattern());
+
+	return {
+		subscribe,
+		set: (value: ArtPatternId | null) => {
+			if (browser) {
+				if (value) {
+					localStorage.setItem('selectedPattern', value);
+				} else {
+					localStorage.removeItem('selectedPattern');
+				}
+			}
+			set(value);
+		},
+		clear: () => {
+			if (browser) {
+				localStorage.removeItem('selectedPattern');
+			}
+			set(null);
+		}
+	};
+}
+
+export const selectedPattern = createSelectedPatternStore();
