@@ -5,7 +5,7 @@
 	"type": "module",
 	"scripts": {
 		"dev": "vite dev",
-		"build": "npm run build:wasm && vite build",
+		"build": "vite build",
 		"build:wasm": "cd wasm-physics && wasm-pack build --target web --out-dir ../src/lib/wasm",
 		"preview": "vite preview",
 		"prepare": "svelte-kit sync || echo ''",
