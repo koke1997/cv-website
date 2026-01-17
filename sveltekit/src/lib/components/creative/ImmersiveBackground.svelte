@@ -2,7 +2,7 @@
 	import { onMount, onDestroy } from 'svelte';
 	import { browser } from '$app/environment';
 	import { creativeChapter, patternConfig as patternConfigStore, selectedPattern as selectedPatternStore, type PatternConfig, type ArtPatternId } from '$lib/stores/creative';
-	import WasmParticles from './WasmParticles.svelte';
+	// WasmParticles import removed - wasm feature not included in this release
 
 	interface Props {
 		currentRoute?: string;
@@ -3197,30 +3197,20 @@
 </script>
 
 {#if browser}
-	{#if isWasmActive}
-		<!-- Wasm Physics Engine (Rust-powered) -->
-		<WasmParticles
-			mouseX={mouseX}
-			mouseY={mouseY}
-			config={patternConfig}
-			opacityMultiplier={opacityMultiplier}
-		/>
-	{:else}
-		<!-- Previous canvas (for fade-out during transitions) -->
-		<canvas
-			bind:this={canvasPrevious}
-			class="immersive-bg previous"
-			class:transitioning={isTransitioning}
-			style:opacity={isTransitioning ? 1 - transitionProgress : 0}
-		></canvas>
-		<!-- Current canvas (main) -->
-		<canvas
-			bind:this={canvasCurrent}
-			class="immersive-bg current"
-			class:transitioning={isTransitioning}
-			style:opacity={isTransitioning ? transitionProgress : 1}
-		></canvas>
-	{/if}
+	<!-- Previous canvas (for fade-out during transitions) -->
+	<canvas
+		bind:this={canvasPrevious}
+		class="immersive-bg previous"
+		class:transitioning={isTransitioning}
+		style:opacity={isTransitioning ? 1 - transitionProgress : 0}
+	></canvas>
+	<!-- Current canvas (main) -->
+	<canvas
+		bind:this={canvasCurrent}
+		class="immersive-bg current"
+		class:transitioning={isTransitioning}
+		style:opacity={isTransitioning ? transitionProgress : 1}
+	></canvas>
 
 	<!-- Opacity slider control -->
 	<div class="opacity-control" class:open={showOpacitySlider}>
