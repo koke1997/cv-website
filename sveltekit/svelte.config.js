@@ -14,7 +14,7 @@ const config = {
 			strict: true
 		}),
 		paths: {
-			base: process.argv.includes('dev') ? '' : '/Lebenslauf'
+			base: process.argv.includes('dev') ? '' : '/cv-website'
 		},
 		prerender: {
 			entries: ['*']

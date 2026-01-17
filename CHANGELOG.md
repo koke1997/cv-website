@@ -50,5 +50,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - SvelteKit with static adapter
 - Ansible for local automation
 
-[Unreleased]: https://github.com/koke1997/Lebenslauf/compare/v1.0.0...HEAD
-[1.0.0]: https://github.com/koke1997/Lebenslauf/releases/tag/v1.0.0
+[Unreleased]: https://github.com/koke1997/cv-website/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/koke1997/cv-website/releases/tag/v1.0.0

@@ -34,7 +34,7 @@ async function main() {
 
   // Clone the template
   try {
-    execSync(`git clone --depth 1 https://github.com/koke1997/Lebenslauf.git "${targetDir}"`, {
+    execSync(`git clone --depth 1 https://github.com/koke1997/cv-website.git "${targetDir}"`, {
       stdio: 'inherit'
     });
 
@@ -61,7 +61,7 @@ async function main() {
     if (fs.existsSync(readmePath)) {
       let readme = fs.readFileSync(readmePath, 'utf8');
       readme = readme.replace(/Ivan Kokalovic/g, name);
-      readme = readme.replace(/koke1997\/Lebenslauf/g, `YOUR_USERNAME/${projectName}`);
+      readme = readme.replace(/koke1997\/cv-website/g, `YOUR_USERNAME/${projectName}`);
       fs.writeFileSync(readmePath, readme);
     }
 

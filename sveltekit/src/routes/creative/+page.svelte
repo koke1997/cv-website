@@ -1,150 +1,23 @@
 <script lang="ts">
 	import { base } from '$app/paths';
 	import { browser } from '$app/environment';
-	import CodeDisplay from '$lib/components/creative/CodeDisplay.svelte';
 	import { creativeChapter } from '$lib/stores/creative';
 
 	const chapters = [
-		{
-			number: 1,
-			title: 'Flow',
-			subtitle: 'The art of letting go',
-			code: `const FlowField = (mouse) => {
-  for (let i = 0; i < cols; i++) {
-    for (let j = 0; j < rows; j++) {
-      const angle = noise(i, j, time);
-      const mouseInfluence = distance(mouse, [i, j]);
-
-      // Let the field guide you
-      drawVector(angle + mouseInfluence);
-    }
-  }
-};`,
-			wisdom: [
-				'Code flows like water—',
-				'it finds its own path.',
-				'',
-				'The best solutions emerge',
-				'when we stop forcing them.'
-			],
-			personal: 'After 5+ years of backend development, I learned that elegant systems design themselves. You just need to listen.'
-		},
-		{
-			number: 2,
-			title: 'Center',
-			subtitle: 'Finding the core',
-			code: `const ConcentricPulse = (origin) => {
-  const center = mouse || screenCenter;
-
-  for (let ring = 0; ring < 50; ring++) {
-    const pulse = sin(time - ring * 0.15);
-    const radius = ring * spacing + pulse;
-
-    drawCircle(center, radius);
-  }
-
-  // Everything emanates from one point
-  scatterParticles(center, maxRadius);
-};`,
-			wisdom: [
-				'Return to the center.',
-				'When complexity overwhelms—',
-				'find the single source of truth.',
-				'',
-				'One function. One purpose.'
-			],
-			personal: 'From Austria to the world of distributed systems. Every complex architecture has a simple core waiting to be found.'
-		},
-		{
-			number: 3,
-			title: 'Form',
-			subtitle: 'Structure in chaos',
-			code: `const GeometricMesh = (rotation) => {
-  const R = majorRadius;
-  const r = minorRadius;
-
-  for (let u = 0; u < segments; u++) {
-    for (let v = 0; v < rings; v++) {
-      // The torus: infinite yet bounded
-      const [x, y, z] = torusPoint(R, r, u, v);
-      const projected = rotateAndProject([x, y, z]);
-
-      drawLine(projected);
-    }
-  }
-};`,
-			wisdom: [
-				'Constraints create freedom.',
-				'A torus is infinite,',
-				'yet perfectly contained.',
-				'',
-				'So too with architecture.'
-			],
-			personal: 'Keycloak, Kubernetes, Terraform—complex tools that create beautiful structure from chaos. That\'s what draws me to infrastructure.'
-		},
-		{
-			number: 4,
-			title: 'Wave',
-			subtitle: 'Patterns emerge',
-			code: `const WaveInterference = () => {
-  for (let w = 0; w < waveCount; w++) {
-    for (let x = 0; x < width; x++) {
-      // Three simple waves, superimposed
-      const y = sin(x * f1 + time) * a1
-              + sin(x * f2 + time * 0.8) * a2
-              + sin(x * f3 + time * 1.5) * a3;
-
-      plot(x, baseY + y);
-    }
-  }
-};`,
-			wisdom: [
-				'Complexity from simplicity.',
-				'Three waves, combined,',
-				'create infinite patterns.',
-				'',
-				'Small functions, composed well.'
-			],
-			personal: 'Music production taught me this—layers of simple elements create rich soundscapes. Code works the same way.'
-		},
-		{
-			number: 5,
-			title: 'Connection',
-			subtitle: 'Networks of meaning',
-			code: `const NeuralNetwork = (nodes) => {
-  // Every node exists in relation
-  for (let i = 0; i < nodes.length; i++) {
-    for (let j = i + 1; j < nodes.length; j++) {
-      const dist = distance(nodes[i], nodes[j]);
-
-      if (dist < threshold) {
-        // The beauty is in the edges
-        drawConnection(nodes[i], nodes[j], dist);
-      }
-    }
-  }
-};`,
-			wisdom: [
-				'No code exists alone.',
-				'Every function calls another.',
-				'Every system connects.',
-				'',
-				'Build bridges, not islands.'
-			],
-			personal: 'Open source contributor, team player, eternal learner. The connections we build matter more than the code we write.'
-		}
+		{ number: 1, title: 'Flow', subtitle: 'Move your mouse to shape the field' },
+		{ number: 2, title: 'Center', subtitle: 'Watch the ripples follow your cursor' },
+		{ number: 3, title: 'Form', subtitle: 'Explore the rotating geometry' },
+		{ number: 4, title: 'Wave', subtitle: 'See patterns emerge from motion' },
+		{ number: 5, title: 'Connection', subtitle: 'Draw lines between the nodes' }
 	];
 
 	let activeChapter = $state(1);
-	let showCode = $state(false);
 
 	function selectChapter(num: number) {
 		activeChapter = num;
-		creativeChapter.set(num); // Update the global store for the background
-		showCode = false;
+		creativeChapter.set(num);
 	}
 
-	// Initialize the store with the current chapter
 	$effect(() => {
 		creativeChapter.set(activeChapter);
 	});
@@ -176,10 +49,10 @@
 		{/each}
 	</nav>
 
-	<!-- Main content floating over background -->
+	<!-- Minimal floating UI -->
 	<main class="content">
 		{#key activeChapter}
-			<article class="chapter" class:show-code={showCode}>
+			<article class="chapter">
 				<header class="chapter-header">
 					<div class="chapter-meta">
 						<span class="chapter-number">{currentChapter.number.toString().padStart(2, '0')}</span>
@@ -189,33 +62,6 @@
 					<h1 class="chapter-title">{currentChapter.title}</h1>
 					<p class="chapter-subtitle">{currentChapter.subtitle}</p>
 				</header>
-
-				<div class="chapter-content">
-					<div class="wisdom-section">
-						{#each currentChapter.wisdom as line}
-							{#if line === ''}
-								<br />
-							{:else}
-								<p class="wisdom-line">{line}</p>
-							{/if}
-						{/each}
-
-						<p class="personal-note">{currentChapter.personal}</p>
-					</div>
-
-					<button class="toggle-code" onclick={() => showCode = !showCode}>
-						{showCode ? 'Hide' : 'View'} the code
-						<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16">
-							<path fill="currentColor" d={showCode ? 'M19 13H5v-2h14v2z' : 'M9.4 16.6L4.8 12l4.6-4.6L8 6l-6 6 6 6 1.4-1.4zm5.2 0l4.6-4.6-4.6-4.6L16 6l6 6-6 6-1.4-1.4z'} />
-						</svg>
-					</button>
-				</div>
-
-				{#if showCode}
-					<div class="code-section">
-						<CodeDisplay code={currentChapter.code} language="typescript" />
-					</div>
-				{/if}
 			</article>
 		{/key}
 	</main>
@@ -337,12 +183,19 @@
 	}
 
 	.chapter-header {
-		margin-bottom: 2rem;
+		text-align: center;
+		background: rgba(255, 255, 255, 0.7);
+		backdrop-filter: blur(20px);
+		border-radius: 16px;
+		padding: 2rem 3rem;
+		box-shadow: 0 8px 32px rgba(0, 0, 0, 0.06);
+		border: 1px solid rgba(255, 255, 255, 0.5);
 	}
 
 	.chapter-meta {
 		display: flex;
 		align-items: center;
+		justify-content: center;
 		gap: 0.5rem;
 		font-family: var(--font-serif);
 		font-size: 0.9rem;
@@ -374,68 +227,6 @@
 		font-style: italic;
 		color: var(--text-muted);
 		margin: 0.75rem 0 0;
-	}
-
-	.chapter-content {
-		background: rgba(255, 255, 255, 0.85);
-		backdrop-filter: blur(20px);
-		border-radius: 16px;
-		padding: 2rem;
-		box-shadow: 0 8px 32px rgba(0, 0, 0, 0.06);
-		border: 1px solid rgba(255, 255, 255, 0.5);
-	}
-
-	.wisdom-section {
-		margin-bottom: 1.5rem;
-	}
-
-	.wisdom-line {
-		font-family: var(--font-serif);
-		font-size: 1.5rem;
-		line-height: 1.6;
-		color: var(--text-dark);
-		margin: 0;
-	}
-
-	.wisdom-line:nth-child(n + 4) {
-		color: var(--text-muted);
-	}
-
-	.personal-note {
-		font-family: var(--font-serif);
-		font-size: 1rem;
-		font-style: italic;
-		color: var(--text-light);
-		margin: 1.5rem 0 0;
-		padding-top: 1.5rem;
-		border-top: 1px solid rgba(0, 0, 0, 0.08);
-		line-height: 1.6;
-	}
-
-	.toggle-code {
-		display: inline-flex;
-		align-items: center;
-		gap: 0.5rem;
-		padding: 0.75rem 1.25rem;
-		background: transparent;
-		border: 1px solid var(--text-light);
-		border-radius: 8px;
-		font-family: var(--font-serif);
-		font-size: 0.9rem;
-		color: var(--text-muted);
-		cursor: pointer;
-		transition: all 0.2s ease;
-	}
-
-	.toggle-code:hover {
-		background: var(--text-dark);
-		color: white;
-		border-color: var(--text-dark);
-	}
-
-	.code-section {
-		margin-top: 1.5rem;
-		animation: fadeUp 0.4s ease;
 	}
 
 	/* Navigation hints */

@@ -1,4 +1,4 @@
-# Contributing to Lebenslauf CV Template
+# Contributing to cv-website CV Template
 
 Thank you for your interest in contributing! This project serves as both my personal CV and a template for others to create their own professional CV websites.
 
@@ -9,8 +9,8 @@ The easiest way to use this template is to fork it:
 1. **Fork the repository** to your GitHub account
 2. **Clone your fork** locally:
    ```bash
-   git clone https://github.com/YOUR_USERNAME/Lebenslauf.git
-   cd Lebenslauf
+   git clone https://github.com/YOUR_USERNAME/cv-website.git
+   cd cv-website
    ```
 3. **Replace the CV content**:
    - Edit `Ivan_Kokalovic_CV.yaml` with your information
@@ -90,8 +90,8 @@ If you've made improvements to the template, automation, or documentation that c
 
 ```bash
 # Clone and setup
-git clone https://github.com/koke1997/Lebenslauf.git
-cd Lebenslauf
+git clone https://github.com/koke1997/cv-website.git
+cd cv-website
 python3 -m venv venv
 source venv/bin/activate
 pip install "rendercv[full]" mkdocs-material
