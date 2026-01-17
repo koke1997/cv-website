@@ -2,7 +2,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![GitHub release](https://img.shields.io/github/v/release/koke1997/Lebenslauf)](https://github.com/koke1997/Lebenslauf/releases)
-[![npm version](https://img.shields.io/npm/v/cv-website-template)](https://www.npmjs.com/package/cv-website-template)
+[![GitHub Package](https://img.shields.io/github/v/release/koke1997/Lebenslauf?label=npm)](https://github.com/koke1997/Lebenslauf/packages)
 [![Deploy](https://github.com/koke1997/Lebenslauf/actions/workflows/deploy.yml/badge.svg)](https://github.com/koke1997/Lebenslauf/actions/workflows/deploy.yml)
 
 Professional CV website built with RenderCV and SvelteKit, deployed on GitHub Pages.
@@ -22,7 +22,7 @@ Get the latest CV from [Releases](https://github.com/koke1997/Lebenslauf/release
 Create your own CV website with one command:
 
 ```bash
-npx cv-website-template
+npx @koke1997/cv-website-template
 ```
 
 This will:

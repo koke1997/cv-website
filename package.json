@@ -1,5 +1,5 @@
 {
-  "name": "cv-website-template",
+  "name": "@koke1997/cv-website-template",
   "version": "1.0.0",
   "description": "Professional CV website template with RenderCV, Ansible automation, and GitHub Pages deployment",
   "author": "Ivan Kokalovic <ivankokalovic@protonmail.ch>",
@@ -40,6 +40,6 @@
     "prepare-template": "node scripts/prepare-template.js"
   },
   "publishConfig": {
-    "access": "public"
+    "registry": "https://npm.pkg.github.com"
   }
 }

@@ -7,6 +7,7 @@ on:
 
 permissions:
   contents: write
+  packages: write
 
 jobs:
   release:
@@ -24,7 +25,8 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '22'
-          registry-url: 'https://registry.npmjs.org'
+          registry-url: 'https://npm.pkg.github.com'
+          scope: '@koke1997'
 
       - name: Install dependencies
         run: |
@@ -56,9 +58,9 @@ jobs:
             - **PDF**: `Ivan_Kokalovic_CV.pdf` - Best for viewing and printing
             - **DOCX**: `Ivan_Kokalovic_CV.docx` - Best for ATS systems and editing
 
-            ### npm Package
+            ### GitHub Package
             ```bash
-            npx cv-website-template
+            npx @koke1997/cv-website-template
             ```
 
             ### Changes
@@ -69,7 +71,7 @@ jobs:
           VERSION=${GITHUB_REF#refs/tags/v}
           npm version $VERSION --no-git-tag-version --allow-same-version
 
-      - name: Publish to npm
-        run: npm publish --access public
+      - name: Publish to GitHub Packages
+        run: npm publish
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
