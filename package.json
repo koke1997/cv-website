@@ -1,0 +1,45 @@
+{
+  "name": "cv-website-template",
+  "version": "1.0.0",
+  "description": "Professional CV website template with RenderCV, Ansible automation, and GitHub Pages deployment",
+  "author": "Ivan Kokalovic <ivankokalovic@protonmail.ch>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/koke1997/Lebenslauf.git"
+  },
+  "homepage": "https://koke1997.github.io/Lebenslauf/",
+  "bugs": {
+    "url": "https://github.com/koke1997/Lebenslauf/issues"
+  },
+  "keywords": [
+    "cv",
+    "resume",
+    "curriculum-vitae",
+    "template",
+    "rendercv",
+    "mkdocs",
+    "sveltekit",
+    "github-pages",
+    "ansible",
+    "ats-optimized"
+  ],
+  "bin": {
+    "create-cv-website": "./bin/create-cv-website.js"
+  },
+  "files": [
+    "bin/",
+    "template/",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "scripts": {
+    "prepare-template": "node scripts/prepare-template.js"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

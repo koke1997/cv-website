@@ -2,6 +2,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![GitHub release](https://img.shields.io/github/v/release/koke1997/Lebenslauf)](https://github.com/koke1997/Lebenslauf/releases)
+[![npm version](https://img.shields.io/npm/v/cv-website-template)](https://www.npmjs.com/package/cv-website-template)
 [![Deploy](https://github.com/koke1997/Lebenslauf/actions/workflows/deploy.yml/badge.svg)](https://github.com/koke1997/Lebenslauf/actions/workflows/deploy.yml)
 
 Professional CV website built with RenderCV and SvelteKit, deployed on GitHub Pages.
@@ -16,9 +17,23 @@ Get the latest CV from [Releases](https://github.com/koke1997/Lebenslauf/release
 - **PDF** - Best for viewing and printing
 - **DOCX** - Best for ATS systems and editing
 
+## Quick Install (npm)
+
+Create your own CV website with one command:
+
+```bash
+npx cv-website-template
+```
+
+This will:
+1. Ask for your name and email
+2. Clone the template
+3. Customize files with your information
+4. Set up everything ready to go
+
 ## Use as Template
 
-Want to create your own professional CV website? Fork this repository!
+Want more control? Fork this repository:
 
 1. **Fork** this repository
 2. **Clone** your fork locally

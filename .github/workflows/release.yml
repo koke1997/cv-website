@@ -20,6 +20,12 @@ jobs:
         with:
           python-version: '3.12'
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          registry-url: 'https://registry.npmjs.org'
+
       - name: Install dependencies
         run: |
           pip install "rendercv[full]"
@@ -50,5 +56,20 @@ jobs:
             - **PDF**: `Ivan_Kokalovic_CV.pdf` - Best for viewing and printing
             - **DOCX**: `Ivan_Kokalovic_CV.docx` - Best for ATS systems and editing
 
+            ### npm Package
+            ```bash
+            npx cv-website-template
+            ```
+
             ### Changes
             See the auto-generated release notes below for details.
+
+      - name: Update package version
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/v}
+          npm version $VERSION --no-git-tag-version --allow-same-version
+
+      - name: Publish to npm
+        run: npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
