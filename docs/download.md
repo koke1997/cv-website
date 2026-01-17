@@ -4,17 +4,21 @@
   <p>Get my curriculum vitae in your preferred format</p>
 </div>
 
+<div class="ats-notice" style="background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%); border-left: 4px solid #2196f3; padding: 1rem 1.5rem; margin-bottom: 2rem; border-radius: 0 8px 8px 0;">
+  <strong style="color: #1565c0;">Applying via job portal?</strong> Use the DOCX format - it's optimized for Applicant Tracking Systems (ATS) that automatically scan and parse resumes.
+</div>
+
 <div class="download-grid">
-  <a href="Ivan_Kokalović_CV.pdf" class="download-card featured" download>
-    <span class="download-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="currentColor" d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6m-1 9h-2v5h-2v-5H7v-2h6v2m2-5V3.5L18.5 9H15Z"/></svg></span>
-    <span class="download-format">PDF</span>
-    <span class="download-desc">Best for printing & ATS</span>
-    <span class="download-badge">Recommended</span>
-  </a>
-  <a href="Ivan_Kokalović_CV.docx" class="download-card" download>
+  <a href="Ivan_Kokalović_CV.docx" class="download-card featured" download>
     <span class="download-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="currentColor" d="M6 2c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6H6m0 2h7v5h5v11H6V4m2 8v2h2l1 4l1-4h2l1 4l1-4h2v-2h-3l-1 4l-1-4H8Z"/></svg></span>
     <span class="download-format">Word</span>
-    <span class="download-desc">Editable DOCX format</span>
+    <span class="download-desc">Best for ATS & job portals</span>
+    <span class="download-badge">ATS Optimized</span>
+  </a>
+  <a href="Ivan_Kokalović_CV.pdf" class="download-card" download>
+    <span class="download-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="currentColor" d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6m-1 9h-2v5h-2v-5H7v-2h6v2m2-5V3.5L18.5 9H15Z"/></svg></span>
+    <span class="download-format">PDF</span>
+    <span class="download-desc">Best for printing & email</span>
   </a>
   <a href="Ivan_Kokalović_CV.odt" class="download-card" download>
     <span class="download-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="currentColor" d="M6 2c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6H6m0 2h7v5h5v11H6V4m2 8v2h8v-2H8m0 4v2h5v-2H8Z"/></svg></span>
@@ -53,6 +57,6 @@
 ---
 
 <div class="download-meta">
-  <p>The PDF is optimized for Applicant Tracking Systems (ATS)</p>
+  <p><strong>Why DOCX for ATS?</strong> Applicant Tracking Systems parse Word documents more reliably than PDFs. The DOCX version uses Arial font, single-column layout, and clean section headers that ATS systems can easily extract.</p>
   <p>Last updated: January 2026</p>
 </div>

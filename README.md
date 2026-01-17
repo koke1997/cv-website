@@ -5,7 +5,23 @@
 [![GitHub Package](https://img.shields.io/github/v/release/koke1997/cv-website?label=npm)](https://github.com/koke1997/cv-website/packages)
 [![Deploy](https://github.com/koke1997/cv-website/actions/workflows/deploy.yml/badge.svg)](https://github.com/koke1997/cv-website/actions/workflows/deploy.yml)
 
-Professional CV website built with RenderCV and SvelteKit, deployed on GitHub Pages.
+**Stop getting rejected by ATS systems.** This open-source CV template is designed specifically for Applicant Tracking Systems that silently reject 75% of resumes before a human ever sees them.
+
+## The Problem
+
+Most developer resumes get rejected automatically because:
+- Fancy designs break ATS parsing
+- Multi-column layouts confuse text extraction
+- Graphics and icons can't be read by automated systems
+- PDF formatting doesn't always translate cleanly
+
+## The Solution
+
+This template provides:
+- **DOCX format** optimized for ATS parsing (Arial font, single column, clean structure)
+- **PDF format** for human readers and printing
+- **Web version** for easy sharing via link
+- **Open source** - fork it and make it your own
 
 ## Live Site
 
