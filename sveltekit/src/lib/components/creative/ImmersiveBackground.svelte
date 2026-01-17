@@ -105,6 +105,27 @@
 	let opacityMultiplier = $state(2.5);
 	let showOpacitySlider = $state(false);
 
+	// Mouse trail state
+	interface TrailPoint {
+		x: number;
+		y: number;
+		age: number;
+	}
+	let mouseTrail: TrailPoint[] = [];
+	const TRAIL_MAX_LENGTH = 50;
+	const TRAIL_MAX_AGE = 1.5; // seconds
+	let lastMouseX = 0.5;
+	let lastMouseY = 0.5;
+
+	// Explosion effects
+	interface Explosion {
+		x: number;
+		y: number;
+		startTime: number;
+		size: number;
+	}
+	let explosions: Explosion[] = [];
+
 	// Particle system state for current canvas
 	interface Particle {
 		x: number;
@@ -2252,6 +2273,140 @@
 	}
 
 	// ============================================
+	// MOUSE TRAIL DRAWING
+	// ============================================
+	function updateMouseTrail() {
+		// Add new point if mouse moved
+		const mx = mouseX * width;
+		const my = mouseY * height;
+		const dx = mx - lastMouseX * width;
+		const dy = my - lastMouseY * height;
+		const dist = Math.sqrt(dx * dx + dy * dy);
+
+		if (dist > 3) { // Only add if moved enough
+			mouseTrail.unshift({ x: mx, y: my, age: 0 });
+			lastMouseX = mouseX;
+			lastMouseY = mouseY;
+		}
+
+		// Age and remove old points
+		const dt = 0.016; // Approx frame time
+		for (let i = mouseTrail.length - 1; i >= 0; i--) {
+			mouseTrail[i].age += dt;
+			if (mouseTrail[i].age > TRAIL_MAX_AGE) {
+				mouseTrail.splice(i, 1);
+			}
+		}
+
+		// Cap length
+		if (mouseTrail.length > TRAIL_MAX_LENGTH) {
+			mouseTrail.length = TRAIL_MAX_LENGTH;
+		}
+	}
+
+	function drawMouseTrail(ctx: CanvasRenderingContext2D) {
+		if (mouseTrail.length < 2) return;
+
+		ctx.save();
+		ctx.lineCap = 'round';
+		ctx.lineJoin = 'round';
+
+		// Draw glow trail
+		for (let i = 1; i < mouseTrail.length; i++) {
+			const p0 = mouseTrail[i - 1];
+			const p1 = mouseTrail[i];
+
+			const alpha0 = 1 - (p0.age / TRAIL_MAX_AGE);
+			const alpha1 = 1 - (p1.age / TRAIL_MAX_AGE);
+			const avgAlpha = (alpha0 + alpha1) / 2;
+
+			// Thicker at the head, thinner at tail
+			const thickness = (1 - i / mouseTrail.length) * 8 + 2;
+
+			// Gradient from warm white to subtle color
+			const hue = (time * 30 + i * 3) % 360;
+
+			ctx.beginPath();
+			ctx.moveTo(p0.x, p0.y);
+			ctx.lineTo(p1.x, p1.y);
+			ctx.strokeStyle = `hsla(${hue}, 50%, 70%, ${avgAlpha * 0.6})`;
+			ctx.lineWidth = thickness;
+			ctx.stroke();
+
+			// Inner bright core
+			ctx.strokeStyle = `hsla(${hue}, 30%, 90%, ${avgAlpha * 0.8})`;
+			ctx.lineWidth = thickness * 0.4;
+			ctx.stroke();
+		}
+
+		ctx.restore();
+	}
+
+	// ============================================
+	// EXPLOSION EFFECTS
+	// ============================================
+	function updateExplosions() {
+		const now = performance.now();
+		for (let i = explosions.length - 1; i >= 0; i--) {
+			const age = (now - explosions[i].startTime) / 1000;
+			if (age > 1.5) { // 1.5 second lifetime
+				explosions.splice(i, 1);
+			}
+		}
+	}
+
+	function drawExplosions(ctx: CanvasRenderingContext2D) {
+		const now = performance.now();
+
+		for (const exp of explosions) {
+			const age = (now - exp.startTime) / 1000;
+			const progress = age / 1.5; // 0 to 1 over 1.5 seconds
+
+			if (progress >= 1) continue;
+
+			const radius = exp.size + progress * 200;
+			const alpha = 1 - progress;
+
+			// Multiple rings expanding
+			for (let ring = 0; ring < 3; ring++) {
+				const ringRadius = radius * (0.5 + ring * 0.3);
+				const ringAlpha = alpha * (1 - ring * 0.3);
+
+				ctx.beginPath();
+				ctx.arc(exp.x, exp.y, ringRadius, 0, Math.PI * 2);
+				ctx.strokeStyle = `rgba(255, 255, 255, ${ringAlpha * 0.5})`;
+				ctx.lineWidth = 3 - ring;
+				ctx.stroke();
+			}
+
+			// Particle burst
+			const particleCount = 12;
+			for (let i = 0; i < particleCount; i++) {
+				const angle = (i / particleCount) * Math.PI * 2;
+				const dist = radius * (0.8 + Math.sin(angle * 3 + time * 5) * 0.2);
+				const px = exp.x + Math.cos(angle) * dist;
+				const py = exp.y + Math.sin(angle) * dist;
+				const particleSize = (1 - progress) * 4;
+
+				ctx.beginPath();
+				ctx.arc(px, py, particleSize, 0, Math.PI * 2);
+				ctx.fillStyle = `rgba(255, 255, 255, ${alpha * 0.8})`;
+				ctx.fill();
+			}
+		}
+	}
+
+	// Listen for explosion events from creative page
+	function handleArtExplosion(e: CustomEvent<{ x: number; y: number; size: number; timestamp: number }>) {
+		explosions.push({
+			x: e.detail.x,
+			y: e.detail.y,
+			size: e.detail.size,
+			startTime: e.detail.timestamp
+		});
+	}
+
+	// ============================================
 	// MAIN DRAW FUNCTION
 	// ============================================
 	function draw() {
@@ -2284,6 +2439,10 @@
 
 		// Draw current style
 		drawStyle(ctxCurrent, currentStyle, particles, blobs, artSeed);
+
+		// Draw interactive overlays (mouse trail, explosions)
+		drawMouseTrail(ctxCurrent);
+		drawExplosions(ctxCurrent);
 	}
 
 	// Performance: track visibility
@@ -2296,6 +2455,11 @@
 			return;
 		}
 		time += 0.016;
+
+		// Update interactive systems
+		updateMouseTrail();
+		updateExplosions();
+
 		draw();
 		animationFrame = requestAnimationFrame(animate);
 	}
@@ -2328,6 +2492,8 @@
 		if (!browser) return;
 		window.addEventListener('resize', resizeCanvas);
 		document.addEventListener('visibilitychange', handleVisibilityChange);
+		// Listen for explosion events from creative page
+		window.addEventListener('artExplosion', handleArtExplosion as EventListener);
 		// Mark as initialized - allows store subscriptions to trigger transitions
 		isInitialized = true;
 	});
@@ -2339,6 +2505,7 @@
 		}
 		window.removeEventListener('resize', resizeCanvas);
 		document.removeEventListener('visibilitychange', handleVisibilityChange);
+		window.removeEventListener('artExplosion', handleArtExplosion as EventListener);
 	});
 </script>
 
