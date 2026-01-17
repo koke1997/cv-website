@@ -1,8 +1,8 @@
 cv:
   name: Ivan Kokalović
   location: Bremen, Germany
+  phone: "+49 160 5573875"
   email: ivankokalovic@protonmail.ch
-  website: https://github.com/koke1997/
   social_networks:
     - network: LinkedIn
       username: kokalovic
@@ -10,7 +10,7 @@ cv:
       username: koke1997
   
   summary: |
-    Backend Developer with 5+ years experience in infrastructure automation, IAM systems, and technical operations. Skilled in Terragrunt, Java, Terraform, and Docker. Previously led L3 support and fraud prevention at IDnow. Founded an IT consulting company in Bosnia. Completing IT degree at University of Mostar.
+    Backend Developer with 5+ years experience in infrastructure automation, Identity and Access Management (IAM) systems, and technical operations. Skilled in Terragrunt, Java, Terraform, and Docker. Experienced with Continuous Integration/Continuous Deployment (CI/CD) pipelines. Previously led Level 3 (L3) technical support and fraud prevention at IDnow. Founded an IT consulting company in Bosnia. Completing Information Technology degree at University of Mostar.
 
   sections:
     Experience:
@@ -30,9 +30,9 @@ cv:
         start_date: 2022-08
         end_date: 2025-06
         highlights:
-          - Managed Jira boards for technical issues within SLA-based priority system
-          - Performed Level 3 engineering tasks and provided pre- and post-sales technical support
-          - Maintained and developed OCR engines, delivered RCA statements for stakeholders
+          - Managed Jira boards for technical issues within Service Level Agreement (SLA)-based priority system
+          - Performed Level 3 (L3) engineering tasks and provided pre- and post-sales technical support
+          - Maintained and developed Optical Character Recognition (OCR) engines, delivered Root Cause Analysis (RCA) statements for stakeholders
           - Supported clients with SDK installations for Android and iOS platforms
           - Wrote lambda functions for internal configuration system and fixed HOCON (Java) syntax errors
           - Monitored and investigated errors using Graylog, Docker logs, and Grafana
@@ -47,11 +47,11 @@ cv:
         end_date: 2022-08
         highlights:
           - Created real-time dashboard for fraud cases with data from multiple sources
-          - Set up OCR Tesseract for big data analysis
+          - Set up Optical Character Recognition (OCR) Tesseract for big data analysis
           - Trained new members during onboarding phase
           - Worked with security print experts from Interpol and Gemalto
           - Prepared training materials for Fraud Prevention Specialists
-          - Participated in team that introduced internal AML system
+          - Participated in team that introduced internal Anti-Money Laundering (AML) system
           - Served as technical contact point and conducted quarterly fraud analyses
       
       - company: IDnow
@@ -84,12 +84,12 @@ cv:
         start_date: 2018-08
         end_date: 2019-03
         highlights:
-          - Provided consulting and maintenance for VoIP systems
+          - Provided consulting and maintenance for VoIP (Voice over IP) systems
           - Optimized hardware costs by leveraging optical fiber networks
-          - Built sales CRM using Google Apps with JSON, JavaScript, Python, C++, SQL
+          - Built sales CRM (Customer Relationship Management) using Google Apps with JSON, JavaScript, Python, C++, SQL
           - Developed scalable invoice factoring system and automation scripts
           - Secured investments from Berlin and Zagreb
-          - Built custom OCR endpoint with Beowulf cluster for invoice processing
+          - Built custom Optical Character Recognition (OCR) endpoint with Beowulf cluster for invoice processing
           - Developed custom dictionary for OCR engine and assembled distributed system from multiple machines
 
     Education:
@@ -103,17 +103,19 @@ cv:
 
     Skills:
       - label: Backend & Infrastructure
-        details: Java, Terragrunt, Terraform, Docker, REST APIs
+        details: Java, Scala, Go, Terragrunt, Terraform, Docker, REST (Representational State Transfer) APIs
       - label: Programming Languages
-        details: Python, Bash, PowerShell, JavaScript, C++, SQL
+        details: Python, Bash, PowerShell, JavaScript, TypeScript, C++, SQL, Dart
       - label: DevOps & Monitoring
-        details: Graylog, Grafana, Docker, Linux, SoftEther
+        details: Graylog, Grafana, Docker, Linux, Ansible, CI/CD (Continuous Integration/Continuous Deployment)
       - label: Technologies & Tools
-        details: Jira, Confluence, MySQL, OCR (Tesseract), Lambda Functions, HOCON
+        details: Jira, Confluence, MySQL, Optical Character Recognition (OCR/Tesseract), AWS Lambda Functions, HOCON, Model Context Protocol (MCP)
+      - label: Frameworks & Libraries
+        details: Svelte, OpenCV
       - label: Systems & Methodologies
-        details: IAM, SLA Management, AML Systems, Fraud Prevention, Technical Support
+        details: Identity and Access Management (IAM), Service Level Agreement (SLA) Management, Anti-Money Laundering (AML) Systems, Fraud Prevention, Technical Support
       - label: Soft Skills
-        details: Creative Problem Solving, Project Management, Technical Documentation
+        details: Problem Solving, Project Management, Technical Documentation, Stakeholder Communication
     
     Certifications:
       - label: Python Essential Training
@@ -131,18 +133,101 @@ cv:
       - label: LabanCompiler
         details: "Computer vision tool converting video to Labanotation dance notation (Python, 7 stars)"
       - label: ScalaCast
-        details: "Distributed video streaming server with peer discovery and fault tolerance (Scala)"
-      - label: Terraform MCP Server
-        details: "Model Context Protocol server for Terraform/IaC automation (Go)"
-      - label: Kolo
-        details: "Keycloak CI/CD automation toolkit (TypeScript)"
+        details: "Distributed video streaming server with peer discovery and fault tolerance (Scala, 3 stars)"
+      - label: bankarstvo
+        details: "Banking DTO application with user registration, login, and balance operations (Python)"
+      - label: HOCONconfReader
+        details: "HOCON configuration file reader returning structured hash maps (Scala)"
+      - label: emrtd_manager
+        details: "Electronic passport and travel document reader (Scala)"
+      - label: ipquery-dart
+        details: "Dart SDK for IP address geolocation API (Dart)"
+      - label: Ansible community.general
+        details: "Documentation contribution to Ansible Community General Collection (Python)"
 
-    "Languages Spoken":
-      - label: Languages
-        details: German (Native), English (Native), Croatian (Native), Serbian (Native), Slovenian (Limited), Spanish (Elementary)
+    Languages:
+      - label: Spoken Languages
+        details: German (Native), English (Fluent), Croatian (Native), Serbian (Native), Slovenian (Basic), Spanish (Basic)
 
 design:
-  theme: sb2nov
+  theme: classic
+  page:
+    size: us-letter
+    top_margin: 0.7in
+    bottom_margin: 0.7in
+    left_margin: 0.7in
+    right_margin: 0.7in
+    show_footer: false
+    show_top_note: false
+  colors:
+    body: rgb(0, 0, 0)
+    name: rgb(0, 0, 0)
+    headline: rgb(0, 0, 0)
+    connections: rgb(0, 0, 0)
+    section_titles: rgb(0, 0, 0)
+    links: rgb(0, 0, 0)
+    footer: rgb(128, 128, 128)
+    top_note: rgb(128, 128, 128)
+  typography:
+    line_spacing: 0.6em
+    alignment: justified
+    date_and_location_column_alignment: right
+    font_family:
+      body: Arial
+      name: Arial
+      headline: Arial
+      connections: Arial
+      section_titles: Arial
+    font_size:
+      body: 10pt
+      name: 26pt
+      headline: 10pt
+      connections: 10pt
+      section_titles: 1.3em
+    small_caps:
+      name: false
+      headline: false
+      connections: false
+      section_titles: false
+    bold:
+      name: true
+      headline: false
+      connections: false
+      section_titles: true
+  links:
+    underline: false
+    show_external_link_icon: false
+  header:
+    alignment: center
+    space_below_name: 0.5cm
+    space_below_headline: 0.5cm
+    space_below_connections: 0.5cm
+    connections:
+      hyperlink: true
+      show_icons: false
+      separator: '|'
+      space_between_connections: 0.5cm
+  section_titles:
+    type: with_full_line
+    line_thickness: 0.5pt
+    space_above: 0.5cm
+    space_below: 0.3cm
+  sections:
+    allow_page_break: true
+    space_between_regular_entries: 1em
+    space_between_text_based_entries: 0.3em
+  entries:
+    date_and_location_width: 4cm
+    side_space: 0.2cm
+    space_between_columns: 0.15cm
+    allow_page_break: false
+    short_second_row: false
+    highlights:
+      bullet: '•'
+      space_left: 0.15cm
+      space_above: 0cm
+      space_between_items: 0cm
+      space_between_bullet_and_text: 0.5em
 
 locale_catalog:
   phone_number_format: national
