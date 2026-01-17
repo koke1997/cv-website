@@ -1,160 +1,152 @@
-# CV - Ivan Kokalović
+# CV - Ivan Kokalovic
 
-Professional CV website built with RenderCV and MkDocs Material, deployed on GitHub Pages.
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![GitHub release](https://img.shields.io/github/v/release/koke1997/Lebenslauf)](https://github.com/koke1997/Lebenslauf/releases)
+[![Deploy](https://github.com/koke1997/Lebenslauf/actions/workflows/deploy.yml/badge.svg)](https://github.com/koke1997/Lebenslauf/actions/workflows/deploy.yml)
 
-## 🚀 Live Site
+Professional CV website built with RenderCV and SvelteKit, deployed on GitHub Pages.
 
-Visit my CV at: **[https://koke1997.github.io/Lebenslauf/](https://koke1997.github.io/Lebenslauf/)**
+## Live Site
 
-## 🛠️ Tech Stack
+**[https://koke1997.github.io/Lebenslauf/](https://koke1997.github.io/Lebenslauf/)**
 
-- **[RenderCV](https://rendercv.com/)** - CV as YAML code, rendered to PDF, HTML, and Markdown
-- **[MkDocs](https://www.mkdocs.org/)** - Static site generator
-- **[Material for MkDocs](https://squidfunk.github.io/mkdocs-material/)** - Beautiful Material Design theme
+## Downloads
+
+Get the latest CV from [Releases](https://github.com/koke1997/Lebenslauf/releases):
+- **PDF** - Best for viewing and printing
+- **DOCX** - Best for ATS systems and editing
+
+## Use as Template
+
+Want to create your own professional CV website? Fork this repository!
+
+1. **Fork** this repository
+2. **Clone** your fork locally
+3. **Edit** `Ivan_Kokalovic_CV.yaml` with your information
+4. **Rename** the file to match your name
+5. **Push** and GitHub Actions deploys automatically
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed instructions.
+
+## Tech Stack
+
+- **[RenderCV](https://rendercv.com/)** - CV as YAML code, rendered to PDF/HTML/Markdown
+- **[SvelteKit](https://kit.svelte.dev/)** - Modern web framework
+- **[Ansible](https://www.ansible.com/)** - Development automation
 - **GitHub Pages** - Free hosting
-- **GitHub Actions** - Automated deployment
+- **GitHub Actions** - Automated deployment and releases
 
-## 📝 Features
+## Features
 
-- ✨ Professional, modern design with Material theme
-- 📱 Fully responsive (mobile, tablet, desktop)
-- 🌓 Dark/Light mode support
-- 📄 Downloadable PDF version
-- 🔍 Full-text search
-- 🚀 Automatic deployment on git push
+- Professional, modern design
+- Fully responsive (mobile, tablet, desktop)
+- Dark/Light mode support
+- Downloadable PDF and DOCX versions
+- ATS-optimized format
+- Automated deployment on git push
+- Release workflow with auto-generated changelog
 
-## 🏃 Quick Start
+## Quick Start
 
 ### Prerequisites
 
 - Python 3.12+
-- pip or pipx
+- Node.js 22+ (for SvelteKit)
+- Ansible (optional, for automation)
 
 ### Local Development
 
-1. **Clone the repository**
-   ```bash
-   git clone https://github.com/koke1997/Lebenslauf.git
-   cd Lebenslauf
-   ```
-
-2. **Create virtual environment**
-   ```bash
-   python3 -m venv venv
-   source venv/bin/activate  # On Windows: venv\Scripts\activate
-   ```
-
-3. **Install dependencies**
-   ```bash
-   pip install "rendercv[full]" mkdocs-material
-   ```
-
-4. **Render the CV**
-   ```bash
-   rendercv render Ivan_Kokalovic_CV.yaml
-   ```
-
-5. **Copy rendered files to docs**
-   ```bash
-   cp rendercv_output/Ivan_Kokalović_CV.pdf docs/
-   cp rendercv_output/Ivan_Kokalović_CV.md docs/cv.md
-   ```
-
-6. **Serve locally**
-   ```bash
-   mkdocs serve
-   ```
-
-7. **Open in browser**
-   Navigate to `http://127.0.0.1:8000`
-
-## 📦 Building for Production
-
 ```bash
-mkdocs build
+# Clone the repository
+git clone https://github.com/koke1997/Lebenslauf.git
+cd Lebenslauf
+
+# Create virtual environment
+python3 -m venv venv
+source venv/bin/activate
+
+# Install dependencies
+pip install "rendercv[full]" mkdocs-material ansible
+
+# Using Ansible (recommended)
+ansible-playbook -i ansible/inventory/hosts ansible/playbooks/serve.yml
+
+# Or manually
+rendercv render Ivan_Kokalovic_CV.yaml
+mkdocs serve -a 127.0.0.1:8080
 ```
 
-The static site will be generated in the `site/` directory.
+Open [http://127.0.0.1:8080](http://127.0.0.1:8080) in your browser.
 
-## 🔄 Updating Your CV
+## Ansible Playbooks
 
-1. Edit `Ivan_Kokalovic_CV.yaml` with your information
-2. Run `rendercv render Ivan_Kokalovic_CV.yaml`
-3. Copy updated files to `docs/`
-4. Commit and push - GitHub Actions handles the rest!
+Ansible playbooks simplify development tasks:
 
-## 📂 Project Structure
+```bash
+# Start server
+ansible-playbook -i ansible/inventory/hosts ansible/playbooks/serve.yml
+
+# Stop server
+ansible-playbook -i ansible/inventory/hosts ansible/playbooks/stop.yml
+
+# Rebuild and restart
+ansible-playbook -i ansible/inventory/hosts ansible/playbooks/rebuild.yml
+
+# Generate DOCX/ODT formats
+ansible-playbook -i ansible/inventory/hosts ansible/playbooks/generate-formats.yml
+```
+
+See [ansible/README.md](ansible/README.md) for all available playbooks.
+
+## Project Structure
 
 ```
 .
-├── .github/
-│   └── workflows/
-│       └── deploy.yml          # GitHub Actions deployment
-├── docs/
-│   ├── index.md               # Home page
-│   ├── cv.md                  # CV content (auto-generated)
-│   ├── download.md            # Download page
-│   ├── contact.md             # Contact page
-│   └── Ivan_Kokalović_CV.pdf  # PDF version (auto-generated)
-├── Ivan_Kokalovic_CV.yaml     # CV source (EDIT THIS!)
+├── Ivan_Kokalovic_CV.yaml     # CV source (YAML)
 ├── mkdocs.yml                 # MkDocs configuration
-├── rendercv_output/           # Generated by RenderCV
-└── venv/                      # Python virtual environment
+├── docs/                      # Website content
+├── sveltekit/                 # SvelteKit frontend
+├── ansible/
+│   ├── inventory/             # Ansible inventory
+│   │   └── group_vars/        # Shared variables
+│   └── playbooks/             # Automation playbooks
+└── .github/
+    └── workflows/
+        ├── deploy.yml         # Deploy to GitHub Pages
+        └── release.yml        # Create releases
 ```
 
-## 🎨 Customization
+## Creating a Release
 
-### Change Theme Colors
-
-Edit `mkdocs.yml`:
-
-```yaml
-theme:
-  palette:
-    primary: blue  # Change to your preferred color
-    accent: indigo
-```
-
-### Add New Pages
-
-1. Create a new `.md` file in `docs/`
-2. Add it to the navigation in `mkdocs.yml`:
-
-```yaml
-nav:
-  - Home: index.md
-  - Your New Page: new-page.md
-```
-
-## 🚀 Deployment
-
-This project uses GitHub Actions for automatic deployment. On every push to `main`:
-
-1. RenderCV generates PDF and Markdown from YAML
-2. MkDocs builds the static site
-3. GitHub Pages publishes the site
-
-### Manual Deployment
+Releases are automated. To create a new release:
 
 ```bash
-mkdocs gh-deploy
+git tag v1.0.0
+git push origin v1.0.0
 ```
 
-## 📄 License
+GitHub Actions will:
+1. Render the CV to PDF
+2. Generate DOCX format
+3. Create a GitHub Release with both files attached
 
-This project structure is open for anyone to use. CV content is personal and proprietary.
+## License
 
-## 🤝 Contributing
+This project is licensed under the MIT License - see [LICENSE](LICENSE) for details.
 
-Feel free to fork this repository and adapt it for your own CV!
+The repository structure, automation, and configuration are freely available for anyone to fork and use. CV content is personal.
 
-## 📧 Contact
+## Contributing
 
-**Ivan Kokalović**
+Contributions are welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+
+## Changelog
+
+See [CHANGELOG.md](CHANGELOG.md) for release history.
+
+## Contact
+
+**Ivan Kokalovic**
 - Email: [ivankokalovic@protonmail.ch](mailto:ivankokalovic@protonmail.ch)
 - LinkedIn: [linkedin.com/in/kokalovic](https://www.linkedin.com/in/kokalovic/)
 - GitHub: [github.com/koke1997](https://github.com/koke1997)
-
----
-
-*Built with ❤️ using RenderCV and MkDocs Material*

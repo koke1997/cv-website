@@ -68,27 +68,28 @@ function createPatternConfigStore() {
 export const patternConfig = createPatternConfigStore();
 
 // All available art patterns (20 total)
+// Icons are SVG identifiers - rendered in PatternConfigPanel.svelte
 export const ART_PATTERNS = [
-	{ id: 'particles', name: 'Particle Network', icon: '✨' },
-	{ id: 'flow', name: 'Flow Field', icon: '🌊' },
-	{ id: 'gradient', name: 'Gradient Mesh', icon: '🎨' },
-	{ id: 'constellation', name: 'Constellation', icon: '⭐' },
-	{ id: 'ripple', name: 'Ripple Pulse', icon: '💫' },
-	{ id: 'grid', name: 'Dot Grid', icon: '📍' },
-	{ id: 'voronoi', name: 'Voronoi Cells', icon: '🔷' },
-	{ id: 'waves', name: 'Wave Contours', icon: '〰️' },
-	{ id: 'hexagon', name: 'Hexagonal Grid', icon: '⬡' },
-	{ id: 'orbits', name: 'Orbiting Rings', icon: '🪐' },
-	{ id: 'bokeh', name: 'Bokeh Lights', icon: '💡' },
-	{ id: 'curves', name: 'Bezier Curves', icon: '🎭' },
-	{ id: 'magnetic', name: 'Magnetic Field', icon: '🧲' },
-	{ id: 'spiral', name: 'Spiral Galaxy', icon: '🌀' },
-	{ id: 'lattice', name: 'Liquid Lattice', icon: '🔗' },
-	{ id: 'aurora', name: 'Aurora Borealis', icon: '🌈' },
-	{ id: 'rain', name: 'Matrix Rain', icon: '🌧️' },
-	{ id: 'circuit', name: 'Circuit Board', icon: '💻' },
-	{ id: 'plasma', name: 'Plasma Wave', icon: '⚡' },
-	{ id: 'noise', name: 'Perlin Noise', icon: '🌫️' }
+	{ id: 'particles', name: 'Particle Network', icon: 'particles' },
+	{ id: 'flow', name: 'Flow Field', icon: 'flow' },
+	{ id: 'gradient', name: 'Gradient Mesh', icon: 'gradient' },
+	{ id: 'constellation', name: 'Constellation', icon: 'constellation' },
+	{ id: 'ripple', name: 'Ripple Pulse', icon: 'ripple' },
+	{ id: 'grid', name: 'Dot Grid', icon: 'grid' },
+	{ id: 'voronoi', name: 'Voronoi Cells', icon: 'voronoi' },
+	{ id: 'waves', name: 'Wave Contours', icon: 'waves' },
+	{ id: 'hexagon', name: 'Hexagonal Grid', icon: 'hexagon' },
+	{ id: 'orbits', name: 'Orbiting Rings', icon: 'orbits' },
+	{ id: 'bokeh', name: 'Bokeh Lights', icon: 'bokeh' },
+	{ id: 'curves', name: 'Bezier Curves', icon: 'curves' },
+	{ id: 'magnetic', name: 'Magnetic Field', icon: 'magnetic' },
+	{ id: 'spiral', name: 'Spiral Galaxy', icon: 'spiral' },
+	{ id: 'lattice', name: 'Liquid Lattice', icon: 'lattice' },
+	{ id: 'aurora', name: 'Aurora Borealis', icon: 'aurora' },
+	{ id: 'rain', name: 'Matrix Rain', icon: 'rain' },
+	{ id: 'circuit', name: 'Circuit Board', icon: 'circuit' },
+	{ id: 'plasma', name: 'Plasma Wave', icon: 'plasma' },
+	{ id: 'noise', name: 'Perlin Noise', icon: 'noise' }
 ] as const;
 
 export type ArtPatternId = typeof ART_PATTERNS[number]['id'];

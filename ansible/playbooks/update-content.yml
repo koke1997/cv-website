@@ -2,9 +2,7 @@
 - name: Update Site Content with Enhancements
   hosts: local
   gather_facts: no
-  vars:
-    project_dir: "/Users/ivankokalovic/Documents/GitHub/Lebenslauf"
-    docs_dir: "{{ project_dir }}/docs"
+  # Variables loaded from ansible/inventory/group_vars/all.yml
   
   tasks:
     - name: Update mkdocs.yml with custom CSS and JS

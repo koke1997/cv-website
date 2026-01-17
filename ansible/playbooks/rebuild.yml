@@ -2,13 +2,7 @@
 - name: Rebuild CV Site with Enhancements
   hosts: local
   gather_facts: false
-  vars:
-    project_dir: "/Users/ivankokalovic/Documents/GitHub/Lebenslauf"
-    venv_dir: "{{ project_dir }}/venv"
-    serve_host: "127.0.0.1"
-    serve_port: 8080
-    log_file: "/tmp/mkdocs_cv.log"
-    pid_file: "/tmp/mkdocs_cv.pid"
+  # Variables loaded from ansible/inventory/group_vars/all.yml
 
   tasks:
     - name: Find existing server process

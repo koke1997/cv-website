@@ -1,0 +1,22 @@
+---
+# Shared variables for all Ansible playbooks
+# These variables are automatically loaded for all hosts in the inventory
+
+# Project paths - dynamically calculated from playbook location
+# Note: playbook_dir points to ansible/playbooks/, so we go up two levels
+project_dir: "{{ playbook_dir | dirname | dirname }}"
+docs_dir: "{{ project_dir }}/docs"
+venv_dir: "{{ project_dir }}/venv"
+
+# CV configuration
+cv_name: "Ivan_Kokalović_CV"
+cv_yaml: "Ivan_Kokalovic_CV.yaml"
+source_md: "{{ project_dir }}/rendercv_output/{{ cv_name }}.md"
+
+# Server configuration
+serve_host: "127.0.0.1"
+serve_port: 8080
+
+# Temporary files
+log_file: "/tmp/mkdocs_cv.log"
+pid_file: "/tmp/mkdocs_cv.pid"

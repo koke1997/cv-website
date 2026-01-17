@@ -2,11 +2,7 @@
 - name: Generate CV in DOCX and ODT Formats
   hosts: local
   gather_facts: false
-  vars:
-    project_dir: "/Users/ivankokalovic/Documents/GitHub/Lebenslauf"
-    source_md: "{{ project_dir }}/rendercv_output/Ivan_Kokalović_CV.md"
-    docs_dir: "{{ project_dir }}/docs"
-    cv_name: "Ivan_Kokalović_CV"
+  # Variables loaded from ansible/inventory/group_vars/all.yml
 
   tasks:
     - name: Check if source markdown exists

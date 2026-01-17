@@ -1,0 +1,54 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: |
+          pip install "rendercv[full]"
+          sudo apt-get update && sudo apt-get install -y pandoc
+
+      - name: Render CV
+        run: rendercv render Ivan_Kokalovic_CV.yaml
+
+      - name: Generate DOCX
+        run: |
+          pandoc "rendercv_output/Ivan_Kokalović_CV.md" -o "Ivan_Kokalovic_CV.docx"
+
+      - name: Rename PDF for easier download
+        run: |
+          cp "rendercv_output/Ivan_Kokalović_CV.pdf" "Ivan_Kokalovic_CV.pdf"
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            Ivan_Kokalovic_CV.pdf
+            Ivan_Kokalovic_CV.docx
+          generate_release_notes: true
+          body: |
+            ## CV Release ${{ github.ref_name }}
+
+            ### Downloads
+            - **PDF**: `Ivan_Kokalovic_CV.pdf` - Best for viewing and printing
+            - **DOCX**: `Ivan_Kokalovic_CV.docx` - Best for ATS systems and editing
+
+            ### Changes
+            See the auto-generated release notes below for details.

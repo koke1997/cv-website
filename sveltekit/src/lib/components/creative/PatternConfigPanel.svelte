@@ -57,6 +57,155 @@
 	}
 </script>
 
+<!-- SVG icon definitions (hidden, referenced via use) -->
+<svg style="display: none;">
+	<defs>
+		<!-- Auto/Refresh icon -->
+		<symbol id="icon-auto" viewBox="0 0 16 16">
+			<path d="M14 8A6 6 0 1 1 2.34 5.74" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+			<path d="M2 2v4h4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+		</symbol>
+		<!-- Particles - scattered dots -->
+		<symbol id="icon-particles" viewBox="0 0 16 16">
+			<circle cx="4" cy="4" r="1.5" fill="currentColor"/>
+			<circle cx="12" cy="5" r="1" fill="currentColor"/>
+			<circle cx="8" cy="8" r="1.5" fill="currentColor"/>
+			<circle cx="3" cy="11" r="1" fill="currentColor"/>
+			<circle cx="11" cy="12" r="1.5" fill="currentColor"/>
+			<circle cx="6" cy="13" r="0.8" fill="currentColor"/>
+		</symbol>
+		<!-- Flow - curved lines -->
+		<symbol id="icon-flow" viewBox="0 0 16 16">
+			<path d="M2 4c4 0 4 4 8 4s4-4 8-4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+			<path d="M2 8c4 0 4 4 8 4s4-4 8-4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+			<path d="M2 12c4 0 4 4 8 4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+		</symbol>
+		<!-- Gradient - overlapping circles -->
+		<symbol id="icon-gradient" viewBox="0 0 16 16">
+			<circle cx="6" cy="6" r="4" fill="none" stroke="currentColor" stroke-width="1.2"/>
+			<circle cx="10" cy="6" r="4" fill="none" stroke="currentColor" stroke-width="1.2"/>
+			<circle cx="8" cy="10" r="4" fill="none" stroke="currentColor" stroke-width="1.2"/>
+		</symbol>
+		<!-- Constellation - connected stars -->
+		<symbol id="icon-constellation" viewBox="0 0 16 16">
+			<circle cx="3" cy="4" r="1.2" fill="currentColor"/>
+			<circle cx="8" cy="2" r="1" fill="currentColor"/>
+			<circle cx="13" cy="5" r="1.2" fill="currentColor"/>
+			<circle cx="5" cy="10" r="1" fill="currentColor"/>
+			<circle cx="11" cy="12" r="1.2" fill="currentColor"/>
+			<path d="M3 4l5-2m0 0l5 3m-5-3l2 8m-5 0l6 2" fill="none" stroke="currentColor" stroke-width="0.6"/>
+		</symbol>
+		<!-- Ripple - concentric circles -->
+		<symbol id="icon-ripple" viewBox="0 0 16 16">
+			<circle cx="8" cy="8" r="2" fill="none" stroke="currentColor" stroke-width="1"/>
+			<circle cx="8" cy="8" r="4" fill="none" stroke="currentColor" stroke-width="0.8" opacity="0.7"/>
+			<circle cx="8" cy="8" r="6" fill="none" stroke="currentColor" stroke-width="0.6" opacity="0.4"/>
+		</symbol>
+		<!-- Grid - dot grid -->
+		<symbol id="icon-grid" viewBox="0 0 16 16">
+			<circle cx="4" cy="4" r="1" fill="currentColor"/>
+			<circle cx="8" cy="4" r="1" fill="currentColor"/>
+			<circle cx="12" cy="4" r="1" fill="currentColor"/>
+			<circle cx="4" cy="8" r="1" fill="currentColor"/>
+			<circle cx="8" cy="8" r="1" fill="currentColor"/>
+			<circle cx="12" cy="8" r="1" fill="currentColor"/>
+			<circle cx="4" cy="12" r="1" fill="currentColor"/>
+			<circle cx="8" cy="12" r="1" fill="currentColor"/>
+			<circle cx="12" cy="12" r="1" fill="currentColor"/>
+		</symbol>
+		<!-- Voronoi - cellular pattern -->
+		<symbol id="icon-voronoi" viewBox="0 0 16 16">
+			<path d="M1 8l4-6h6l4 6-4 6H5z" fill="none" stroke="currentColor" stroke-width="1.2"/>
+			<path d="M5 2v12M11 2v12M1 8h14" fill="none" stroke="currentColor" stroke-width="0.8" opacity="0.5"/>
+		</symbol>
+		<!-- Waves - wavy lines -->
+		<symbol id="icon-waves" viewBox="0 0 16 16">
+			<path d="M1 5c2-2 4 2 6 0s4 2 6 0" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+			<path d="M1 9c2-2 4 2 6 0s4 2 6 0" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+			<path d="M1 13c2-2 4 2 6 0s4 2 6 0" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+		</symbol>
+		<!-- Hexagon - hexagonal shape -->
+		<symbol id="icon-hexagon" viewBox="0 0 16 16">
+			<path d="M8 1l6 3.5v7L8 15l-6-3.5v-7z" fill="none" stroke="currentColor" stroke-width="1.3"/>
+			<circle cx="8" cy="8" r="1" fill="currentColor"/>
+		</symbol>
+		<!-- Orbits - concentric ellipses -->
+		<symbol id="icon-orbits" viewBox="0 0 16 16">
+			<ellipse cx="8" cy="8" rx="6" ry="3" fill="none" stroke="currentColor" stroke-width="1" transform="rotate(-30 8 8)"/>
+			<ellipse cx="8" cy="8" rx="6" ry="3" fill="none" stroke="currentColor" stroke-width="1" transform="rotate(30 8 8)"/>
+			<circle cx="8" cy="8" r="1.5" fill="currentColor"/>
+		</symbol>
+		<!-- Bokeh - blurred circles -->
+		<symbol id="icon-bokeh" viewBox="0 0 16 16">
+			<circle cx="5" cy="5" r="2.5" fill="none" stroke="currentColor" stroke-width="1.2"/>
+			<circle cx="11" cy="6" r="2" fill="none" stroke="currentColor" stroke-width="1"/>
+			<circle cx="7" cy="11" r="2.5" fill="none" stroke="currentColor" stroke-width="1.2"/>
+			<circle cx="12" cy="12" r="1.5" fill="none" stroke="currentColor" stroke-width="0.8"/>
+		</symbol>
+		<!-- Curves - bezier curves -->
+		<symbol id="icon-curves" viewBox="0 0 16 16">
+			<path d="M2 14C2 6 6 2 14 2" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+			<path d="M2 10C2 6 6 4 10 4" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round"/>
+			<path d="M4 14C4 10 8 8 12 8" fill="none" stroke="currentColor" stroke-width="0.8" stroke-linecap="round"/>
+		</symbol>
+		<!-- Magnetic - field lines -->
+		<symbol id="icon-magnetic" viewBox="0 0 16 16">
+			<circle cx="4" cy="8" r="2" fill="currentColor"/>
+			<circle cx="12" cy="8" r="2" fill="currentColor"/>
+			<path d="M6 8c2-3 2-3 4 0s2 3 4 0" fill="none" stroke="currentColor" stroke-width="0.8"/>
+			<path d="M6 8c2 3 2 3 4 0s2-3 4 0" fill="none" stroke="currentColor" stroke-width="0.8"/>
+		</symbol>
+		<!-- Spiral - spiral shape -->
+		<symbol id="icon-spiral" viewBox="0 0 16 16">
+			<path d="M8 8c0-1 1-2 2-2s2 1 2 2-1 3-3 3-4-2-4-4 2-5 5-5 6 3 6 6" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+		</symbol>
+		<!-- Lattice - connected grid -->
+		<symbol id="icon-lattice" viewBox="0 0 16 16">
+			<path d="M2 4h12M2 8h12M2 12h12" fill="none" stroke="currentColor" stroke-width="0.8"/>
+			<path d="M4 2v12M8 2v12M12 2v12" fill="none" stroke="currentColor" stroke-width="0.8"/>
+			<circle cx="4" cy="4" r="1" fill="currentColor"/>
+			<circle cx="8" cy="8" r="1" fill="currentColor"/>
+			<circle cx="12" cy="12" r="1" fill="currentColor"/>
+		</symbol>
+		<!-- Aurora - horizontal bands -->
+		<symbol id="icon-aurora" viewBox="0 0 16 16">
+			<path d="M1 4c4 1 8-1 14 0" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+			<path d="M1 8c5 2 9-2 14 1" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" opacity="0.7"/>
+			<path d="M1 12c3 1 11-1 14 0" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" opacity="0.5"/>
+		</symbol>
+		<!-- Rain - vertical lines -->
+		<symbol id="icon-rain" viewBox="0 0 16 16">
+			<path d="M3 1v6M7 3v8M11 1v10M15 4v6" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+			<path d="M5 5v5M9 2v7M13 6v8" fill="none" stroke="currentColor" stroke-width="0.8" stroke-linecap="round" opacity="0.6"/>
+		</symbol>
+		<!-- Circuit - electronic paths -->
+		<symbol id="icon-circuit" viewBox="0 0 16 16">
+			<path d="M2 8h4l2-4h4l2 4" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+			<path d="M4 12h8" fill="none" stroke="currentColor" stroke-width="1.2"/>
+			<circle cx="4" cy="12" r="1" fill="currentColor"/>
+			<circle cx="12" cy="12" r="1" fill="currentColor"/>
+			<circle cx="8" cy="4" r="1" fill="currentColor"/>
+		</symbol>
+		<!-- Plasma - wavy blob -->
+		<symbol id="icon-plasma" viewBox="0 0 16 16">
+			<path d="M8 2c3 0 5 1 5.5 4s-1 4-2.5 5-3 2-5 1-3-2-3.5-4.5S5 2 8 2z" fill="none" stroke="currentColor" stroke-width="1.2"/>
+			<path d="M6 6c1-1 3 0 4 1s0 3-1 3-2-1-2-2" fill="none" stroke="currentColor" stroke-width="0.8"/>
+		</symbol>
+		<!-- Noise - scattered pattern -->
+		<symbol id="icon-noise" viewBox="0 0 16 16">
+			<rect x="2" y="2" width="2" height="2" fill="currentColor" opacity="0.3"/>
+			<rect x="6" y="2" width="2" height="2" fill="currentColor" opacity="0.7"/>
+			<rect x="10" y="2" width="2" height="2" fill="currentColor" opacity="0.5"/>
+			<rect x="4" y="6" width="2" height="2" fill="currentColor" opacity="0.8"/>
+			<rect x="8" y="6" width="2" height="2" fill="currentColor" opacity="0.4"/>
+			<rect x="12" y="6" width="2" height="2" fill="currentColor" opacity="0.6"/>
+			<rect x="2" y="10" width="2" height="2" fill="currentColor" opacity="0.5"/>
+			<rect x="6" y="10" width="2" height="2" fill="currentColor" opacity="0.9"/>
+			<rect x="10" y="10" width="2" height="2" fill="currentColor" opacity="0.3"/>
+		</symbol>
+	</defs>
+</svg>
+
 <svelte:window onclick={handleClickOutside} />
 
 {#if browser}
@@ -74,6 +223,7 @@
 		</button>
 
 		{#if isOpen}
+			<!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
 			<div class="panel-content" onclick={(e) => e.stopPropagation()}>
 				<div class="panel-header">
 					<h3>Background Pattern</h3>
@@ -99,7 +249,9 @@
 							onclick={() => selectPattern(null)}
 							title="Use route-based pattern selection"
 						>
-							<span class="pattern-icon">🔄</span>
+							<span class="pattern-icon">
+								<svg width="16" height="16"><use href="#icon-auto"/></svg>
+							</span>
 							<span class="pattern-name">Auto</span>
 						</button>
 						{#each ART_PATTERNS as pattern}
@@ -109,7 +261,9 @@
 								onclick={() => selectPattern(pattern.id)}
 								title={pattern.name}
 							>
-								<span class="pattern-icon">{pattern.icon}</span>
+								<span class="pattern-icon">
+									<svg width="16" height="16"><use href="#icon-{pattern.icon}"/></svg>
+								</span>
 								<span class="pattern-name">{pattern.name.split(' ')[0]}</span>
 							</button>
 						{/each}
@@ -344,9 +498,17 @@
 	}
 
 	.pattern-icon {
-		font-size: 16px;
-		line-height: 1;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		width: 16px;
+		height: 16px;
 		margin-bottom: 4px;
+	}
+
+	.pattern-icon svg {
+		width: 16px;
+		height: 16px;
 	}
 
 	.pattern-name {

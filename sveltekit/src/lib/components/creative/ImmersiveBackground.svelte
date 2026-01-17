@@ -34,13 +34,19 @@
 		'voronoi' | 'waves' | 'hexagon' | 'orbits' | 'bokeh' | 'curves' |
 		'magnetic' | 'spiral' | 'lattice' | 'aurora' | 'rain' | 'circuit' | 'plasma' | 'noise';
 
+	// Current style state (declared early for use in subscriptions)
+	let currentStyle = $state<ArtStyle>('particles');
+
+	// Flag to track if component is fully initialized (prevents calling startTransition during init)
+	let isInitialized = false;
+
 	// Subscribe to selectedPattern store for manual override
 	let selectedPatternOverride = $state<ArtPatternId | null>(null);
 	if (browser) {
 		selectedPatternStore.subscribe((value) => {
 			selectedPatternOverride = value;
-			// When user selects a pattern, trigger a transition
-			if (value && value !== currentStyle) {
+			// When user selects a pattern, trigger a transition (only after initialization)
+			if (isInitialized && value && value !== currentStyle) {
 				startTransition(value as ArtStyle);
 			}
 		});
@@ -86,7 +92,6 @@
 	// State
 	let artSeed = $state(Date.now());
 	let previousRoute = $state<string | null>(null);
-	let currentStyle = $state<ArtStyle>('particles');
 	let previousStyle = $state<ArtStyle | null>(null);
 	let animationStarted = false;
 
@@ -656,9 +661,24 @@
 		const speedMult = patternConfig.speed;
 		const mouseMult = patternConfig.mouseInfluence;
 		const connectionDist = 150;
+		const mouseInfluenceRadius = 200 * mouseMult;
+		const mousePosX = mouseX * width;
+		const mousePosY = mouseY * height;
 
-		// Update particles (slow drift)
+		// Update particles (slow drift + magnetic pull toward mouse)
 		particleList.forEach((p) => {
+			// Calculate distance to mouse
+			const dx = mousePosX - p.x;
+			const dy = mousePosY - p.y;
+			const distToMouse = Math.sqrt(dx * dx + dy * dy);
+
+			// Magnetic pull effect - stars gently attracted to mouse
+			if (distToMouse < mouseInfluenceRadius && distToMouse > 0) {
+				const pullStrength = (1 - distToMouse / mouseInfluenceRadius) * 0.5 * mouseMult;
+				p.x += (dx / distToMouse) * pullStrength;
+				p.y += (dy / distToMouse) * pullStrength;
+			}
+
 			p.x += p.vx * 0.3 * speedMult;
 			p.y += p.vy * 0.3 * speedMult;
 
@@ -669,11 +689,7 @@
 			if (p.y > height) p.y = 0;
 		});
 
-		// Draw connections to nearest 2-3 neighbors
-		ctx.strokeStyle = `rgba(60, 60, 60, ${opacity * 0.3})`;
-		ctx.lineWidth = 0.5;
-		ctx.globalAlpha = 1;
-
+		// Draw connections to nearest 2-3 neighbors with mouse highlighting
 		particleList.forEach((p, i) => {
 			// Find nearest neighbors
 			const distances = particleList
@@ -683,43 +699,89 @@
 				}))
 				.filter((d) => d.j !== i && d.dist < connectionDist)
 				.sort((a, b) => a.dist - b.dist)
-				.slice(0, 2);
+				.slice(0, 3);
 
 			distances.forEach((d) => {
-				ctx.globalAlpha = (1 - d.dist / connectionDist) * opacity;
+				const other = particleList[d.j];
+				// Check if connection line is near mouse
+				const midX = (p.x + other.x) / 2;
+				const midY = (p.y + other.y) / 2;
+				const distMidToMouse = Math.sqrt((midX - mousePosX) ** 2 + (midY - mousePosY) ** 2);
+				const mouseNearLine = distMidToMouse < mouseInfluenceRadius * 0.6;
+
+				// Highlight connections near mouse
+				const baseAlpha = (1 - d.dist / connectionDist) * opacity;
+				const highlightBoost = mouseNearLine ? (1 - distMidToMouse / (mouseInfluenceRadius * 0.6)) * mouseMult * 2 : 0;
+
+				ctx.strokeStyle = mouseNearLine
+					? `rgba(40, 40, 40, ${baseAlpha * (1 + highlightBoost)})`
+					: `rgba(60, 60, 60, ${baseAlpha * 0.3})`;
+				ctx.lineWidth = mouseNearLine ? 1 + highlightBoost : 0.5;
+				ctx.globalAlpha = 1;
 				ctx.beginPath();
 				ctx.moveTo(p.x, p.y);
-				ctx.lineTo(particleList[d.j].x, particleList[d.j].y);
+				ctx.lineTo(other.x, other.y);
 				ctx.stroke();
 			});
 		});
 
-		// Draw stars with twinkling
+		// Draw stars with twinkling and mouse-proximity brightening
 		ctx.globalAlpha = 1;
 		particleList.forEach((p, i) => {
-			const twinkle = Math.sin(time * 2 * speedMult + i * 0.5) * 0.5 + 0.5;
-			const size = p.size * (0.7 + twinkle * 0.3);
-			ctx.fillStyle = `rgba(60, 60, 60, ${opacity * (0.7 + twinkle * 0.3)})`;
+			const distToMouse = Math.sqrt((p.x - mousePosX) ** 2 + (p.y - mousePosY) ** 2);
+			const mouseProximity = Math.max(0, 1 - distToMouse / mouseInfluenceRadius);
+
+			// Enhanced twinkle when near mouse
+			const baseFreq = 2 * speedMult;
+			const twinkleFreq = baseFreq + mouseProximity * 4 * mouseMult;
+			const twinkle = Math.sin(time * twinkleFreq + i * 0.5) * 0.5 + 0.5;
+
+			// Stars near mouse are larger and brighter
+			const sizeBoost = 1 + mouseProximity * 1.5 * mouseMult;
+			const brightnessBoost = 1 + mouseProximity * 2 * mouseMult;
+			const size = p.size * (0.7 + twinkle * 0.3) * sizeBoost;
+
+			// Pulsing glow for stars near mouse
+			if (mouseProximity > 0.3) {
+				const pulseSize = size * (1.5 + Math.sin(time * 6) * 0.3);
+				const glowGradient = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, pulseSize * 2);
+				glowGradient.addColorStop(0, `rgba(50, 50, 50, ${opacity * mouseProximity * 0.5})`);
+				glowGradient.addColorStop(1, 'rgba(50, 50, 50, 0)');
+				ctx.fillStyle = glowGradient;
+				ctx.beginPath();
+				ctx.arc(p.x, p.y, pulseSize * 2, 0, Math.PI * 2);
+				ctx.fill();
+			}
+
+			const gray = Math.max(30, 60 - mouseProximity * 30);
+			ctx.fillStyle = `rgba(${gray}, ${gray}, ${gray}, ${opacity * (0.7 + twinkle * 0.3) * brightnessBoost})`;
 			ctx.beginPath();
 			ctx.arc(p.x, p.y, size, 0, Math.PI * 2);
 			ctx.fill();
 		});
 
-		// Mouse glow
-		const glowRadius = 80 * mouseMult;
+		// Mouse glow (enhanced)
+		const glowRadius = 100 * mouseMult;
 		const gradient = ctx.createRadialGradient(
-			mouseX * width,
-			mouseY * height,
+			mousePosX,
+			mousePosY,
 			0,
-			mouseX * width,
-			mouseY * height,
+			mousePosX,
+			mousePosY,
 			glowRadius
 		);
-		gradient.addColorStop(0, `rgba(60, 60, 60, ${opacity * 0.5 * mouseMult})`);
+		gradient.addColorStop(0, `rgba(50, 50, 50, ${opacity * 0.6 * mouseMult})`);
+		gradient.addColorStop(0.5, `rgba(55, 55, 55, ${opacity * 0.3 * mouseMult})`);
 		gradient.addColorStop(1, 'rgba(60, 60, 60, 0)');
 		ctx.fillStyle = gradient;
 		ctx.beginPath();
-		ctx.arc(mouseX * width, mouseY * height, glowRadius, 0, Math.PI * 2);
+		ctx.arc(mousePosX, mousePosY, glowRadius, 0, Math.PI * 2);
+		ctx.fill();
+
+		// Small cursor star
+		ctx.fillStyle = `rgba(40, 40, 40, ${opacity * 2 * mouseMult})`;
+		ctx.beginPath();
+		ctx.arc(mousePosX, mousePosY, 3, 0, Math.PI * 2);
 		ctx.fill();
 	}
 
@@ -727,17 +789,18 @@
 	// 5. RIPPLE PULSE (Contact)
 	// ============================================
 	function drawRipplePulse(ctx: CanvasRenderingContext2D) {
-		const opacity = 0.05 * opacityMultiplier * patternConfig.opacity;
+		const opacity = 0.07 * opacityMultiplier * patternConfig.opacity;
 		const speedMult = patternConfig.speed;
 		const mouseMult = patternConfig.mouseInfluence;
-		const centerX = width / 2 + (mouseX - 0.5) * 150 * mouseMult;
-		const centerY = height / 2 + (mouseY - 0.5) * 150 * mouseMult;
+		const centerX = width / 2 + (mouseX - 0.5) * 100 * mouseMult;
+		const centerY = height / 2 + (mouseY - 0.5) * 100 * mouseMult;
 		const maxRadius = Math.max(width, height) * 0.6;
 		const ringCount = 12;
 
 		ctx.strokeStyle = `rgba(60, 60, 60, ${opacity})`;
 		ctx.lineWidth = 1;
 
+		// Main center ripples
 		for (let i = 0; i < ringCount; i++) {
 			const phase = (time * 0.5 * speedMult + i * 0.3) % (Math.PI * 2);
 			const progress = phase / (Math.PI * 2);
@@ -750,11 +813,51 @@
 			ctx.stroke();
 		}
 
+		// Mouse-triggered ripples emanating from mouse position
+		const mouseRippleX = mouseX * width;
+		const mouseRippleY = mouseY * height;
+		const mouseRippleCount = 6;
+		const mouseMaxRadius = 200 * mouseMult;
+
+		ctx.strokeStyle = `rgba(50, 50, 50, ${opacity * 1.5})`;
+		ctx.lineWidth = 1.5;
+
+		for (let i = 0; i < mouseRippleCount; i++) {
+			const phase = (time * 0.8 * speedMult + i * 0.5) % (Math.PI * 2);
+			const progress = phase / (Math.PI * 2);
+			const radius = progress * mouseMaxRadius;
+			const fadeOut = (1 - progress) * mouseMult;
+
+			ctx.globalAlpha = fadeOut * opacity * 1.2;
+			ctx.beginPath();
+			ctx.arc(mouseRippleX, mouseRippleY, radius, 0, Math.PI * 2);
+			ctx.stroke();
+		}
+
+		// Interaction effect - ripples pushed away from mouse
+		const distToCenter = Math.sqrt((mouseRippleX - centerX) ** 2 + (mouseRippleY - centerY) ** 2);
+		if (distToCenter < maxRadius * 0.8) {
+			const pushStrength = (1 - distToCenter / (maxRadius * 0.8)) * mouseMult;
+			ctx.strokeStyle = `rgba(40, 40, 40, ${opacity * pushStrength * 2})`;
+			ctx.lineWidth = 2;
+			ctx.globalAlpha = opacity * pushStrength;
+			ctx.beginPath();
+			ctx.arc(mouseRippleX, mouseRippleY, 30 + Math.sin(time * 3) * 10, 0, Math.PI * 2);
+			ctx.stroke();
+		}
+
 		// Center dot
 		ctx.globalAlpha = opacity * 2;
 		ctx.fillStyle = `rgba(60, 60, 60, ${opacity * 2})`;
 		ctx.beginPath();
 		ctx.arc(centerX, centerY, 4, 0, Math.PI * 2);
+		ctx.fill();
+
+		// Mouse dot
+		ctx.globalAlpha = opacity * 2 * mouseMult;
+		ctx.fillStyle = `rgba(50, 50, 50, ${opacity * 2})`;
+		ctx.beginPath();
+		ctx.arc(mouseRippleX, mouseRippleY, 3, 0, Math.PI * 2);
 		ctx.fill();
 
 		ctx.globalAlpha = 1;
@@ -1104,9 +1207,10 @@
 		const mouseMult = patternConfig.mouseInfluence;
 		const pointCount = 24;
 		const connectionCount = 8;
+		const mousePosX = mouseX * width;
+		const mousePosY = mouseY * height;
+		const mouseInfluenceRadius = 250 * mouseMult;
 
-		ctx.strokeStyle = `rgba(60, 60, 60, ${opacity})`;
-		ctx.lineWidth = 0.5;
 		ctx.globalAlpha = 1;
 
 		const centerX = width / 2;
@@ -1114,10 +1218,8 @@
 		const radius = Math.min(width, height) * 0.35;
 
 		// Generate points on an ellipse that rotates over time
-		const points: { x: number; y: number }[] = [];
+		const points: { x: number; y: number; distToMouse: number }[] = [];
 		const rotationOffset = time * 0.1 * speedMult;
-		const mouseOffsetX = (mouseX - 0.5) * 50 * mouseMult;
-		const mouseOffsetY = (mouseY - 0.5) * 50 * mouseMult;
 
 		for (let i = 0; i < pointCount; i++) {
 			const angle = (Math.PI * 2 / pointCount) * i + rotationOffset;
@@ -1125,22 +1227,61 @@
 			const rx = radius + wobble + Math.sin(angle * 3) * 30;
 			const ry = radius * 0.7 + wobble + Math.cos(angle * 2) * 20;
 
-			points.push({
-				x: centerX + Math.cos(angle) * rx + mouseOffsetX,
-				y: centerY + Math.sin(angle) * ry + mouseOffsetY
-			});
+			let px = centerX + Math.cos(angle) * rx;
+			let py = centerY + Math.sin(angle) * ry;
+
+			// Calculate distance to mouse for elastic pull
+			const dx = mousePosX - px;
+			const dy = mousePosY - py;
+			const distToMouse = Math.sqrt(dx * dx + dy * dy);
+
+			// Elastic pull toward mouse - points near mouse get pulled stronger
+			if (distToMouse < mouseInfluenceRadius && distToMouse > 0) {
+				const pullStrength = (1 - distToMouse / mouseInfluenceRadius) * 80 * mouseMult;
+				const springFactor = Math.sin(time * 3 + i * 0.3) * 0.2 + 0.8; // Spring oscillation
+				px += (dx / distToMouse) * pullStrength * springFactor;
+				py += (dy / distToMouse) * pullStrength * springFactor;
+			}
+
+			points.push({ x: px, y: py, distToMouse });
 		}
 
-		// Draw bezier curves connecting points
+		// Draw bezier curves connecting points with mouse-aware styling
 		for (let i = 0; i < pointCount; i++) {
 			for (let j = 1; j <= connectionCount; j++) {
 				const targetIndex = (i + j * 3) % pointCount;
 				const p1 = points[i];
 				const p2 = points[targetIndex];
 
-				// Control point influenced by mouse
-				const cpx = (p1.x + p2.x) / 2 + (mouseX - 0.5) * 30 * mouseMult;
-				const cpy = (p1.y + p2.y) / 2 + (mouseY - 0.5) * 30 * mouseMult;
+				// Control point - dramatically pulled toward mouse
+				const baseCpx = (p1.x + p2.x) / 2;
+				const baseCpy = (p1.y + p2.y) / 2;
+
+				const cpDx = mousePosX - baseCpx;
+				const cpDy = mousePosY - baseCpy;
+				const cpDistToMouse = Math.sqrt(cpDx * cpDx + cpDy * cpDy);
+
+				// Strong elastic distortion of control point
+				let cpx = baseCpx;
+				let cpy = baseCpy;
+				if (cpDistToMouse < mouseInfluenceRadius && cpDistToMouse > 0) {
+					const elasticPull = (1 - cpDistToMouse / mouseInfluenceRadius) * 120 * mouseMult;
+					const wave = Math.sin(time * 4 + i * 0.2) * 0.3 + 0.7;
+					cpx += (cpDx / cpDistToMouse) * elasticPull * wave;
+					cpy += (cpDy / cpDistToMouse) * elasticPull * wave;
+				}
+
+				// Curve styling based on proximity to mouse
+				const avgDistToMouse = (p1.distToMouse + p2.distToMouse + cpDistToMouse) / 3;
+				const mouseProximity = Math.max(0, 1 - avgDistToMouse / mouseInfluenceRadius);
+
+				// Curves near mouse are thicker and more opaque
+				const lineWidth = 0.5 + mouseProximity * 2 * mouseMult;
+				const lineOpacity = opacity * (1 + mouseProximity * 3);
+				const gray = Math.max(30, 60 - mouseProximity * 30);
+
+				ctx.strokeStyle = `rgba(${gray}, ${gray}, ${gray}, ${lineOpacity})`;
+				ctx.lineWidth = lineWidth;
 
 				ctx.beginPath();
 				ctx.moveTo(p1.x, p1.y);
@@ -1149,13 +1290,53 @@
 			}
 		}
 
-		// Draw anchor points
-		ctx.fillStyle = `rgba(60, 60, 60, ${opacity * 1.5})`;
+		// Draw anchor points with mouse proximity highlight
 		points.forEach((p) => {
+			const mouseProximity = Math.max(0, 1 - p.distToMouse / mouseInfluenceRadius);
+			const pointSize = 2 + mouseProximity * 4 * mouseMult;
+			const pointOpacity = opacity * 1.5 * (1 + mouseProximity * 2);
+
+			// Glow for points near mouse
+			if (mouseProximity > 0.3) {
+				const glowSize = pointSize * 3;
+				const glowGradient = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, glowSize);
+				glowGradient.addColorStop(0, `rgba(50, 50, 50, ${pointOpacity * mouseProximity * 0.5})`);
+				glowGradient.addColorStop(1, 'rgba(50, 50, 50, 0)');
+				ctx.fillStyle = glowGradient;
+				ctx.beginPath();
+				ctx.arc(p.x, p.y, glowSize, 0, Math.PI * 2);
+				ctx.fill();
+			}
+
+			ctx.fillStyle = `rgba(50, 50, 50, ${pointOpacity})`;
 			ctx.beginPath();
-			ctx.arc(p.x, p.y, 2, 0, Math.PI * 2);
+			ctx.arc(p.x, p.y, pointSize, 0, Math.PI * 2);
 			ctx.fill();
 		});
+
+		// Mouse cursor indicator
+		ctx.fillStyle = `rgba(40, 40, 40, ${opacity * 3 * mouseMult})`;
+		ctx.beginPath();
+		ctx.arc(mousePosX, mousePosY, 4, 0, Math.PI * 2);
+		ctx.fill();
+
+		// Trailing curves from mouse (elastic ribbons)
+		const trailCount = 6;
+		ctx.strokeStyle = `rgba(50, 50, 50, ${opacity * 0.8 * mouseMult})`;
+		ctx.lineWidth = 1;
+		for (let t = 0; t < trailCount; t++) {
+			const trailAngle = (Math.PI * 2 / trailCount) * t + time * 0.5;
+			const trailLength = 60 * mouseMult;
+			const endX = mousePosX + Math.cos(trailAngle) * trailLength;
+			const endY = mousePosY + Math.sin(trailAngle) * trailLength;
+			const ctrlX = mousePosX + Math.cos(trailAngle + 0.5) * trailLength * 0.7;
+			const ctrlY = mousePosY + Math.sin(trailAngle + 0.3) * trailLength * 0.5;
+
+			ctx.beginPath();
+			ctx.moveTo(mousePosX, mousePosY);
+			ctx.quadraticCurveTo(ctrlX, ctrlY, endX, endY);
+			ctx.stroke();
+		}
 	}
 
 	// ============================================
@@ -1165,22 +1346,28 @@
 		const opacity = 0.05 * opacityMultiplier * patternConfig.opacity;
 		const speedMult = patternConfig.speed;
 		const mouseMult = patternConfig.mouseInfluence;
+		const mousePosX = mouseX * width;
+		const mousePosY = mouseY * height;
+
+		// Mouse acts as a virtual attractor (alternates polarity based on time)
+		const mouseStrength = 1.5 * mouseMult * Math.sin(time * 0.5);
 
 		// Update attractor positions
 		attractors.forEach((a) => {
-			// Mouse influence
-			const dx = mouseX * width - a.x;
-			const dy = mouseY * height - a.y;
+			// Mouse influence on attractor movement
+			const dx = mousePosX - a.x;
+			const dy = mousePosY - a.y;
 			const dist = Math.sqrt(dx * dx + dy * dy);
-			if (dist < 200 && dist > 0) {
-				a.vx += (dx / dist) * 0.01 * mouseMult;
-				a.vy += (dy / dist) * 0.01 * mouseMult;
+			if (dist < 250 && dist > 0) {
+				const pullForce = (1 - dist / 250) * 0.03 * mouseMult;
+				a.vx += (dx / dist) * pullForce;
+				a.vy += (dy / dist) * pullForce;
 			}
 
 			a.x += a.vx * speedMult + Math.sin(time * 0.3 + a.strength) * 0.5;
 			a.y += a.vy * speedMult + Math.cos(time * 0.25 + a.strength) * 0.5;
-			a.vx *= 0.98;
-			a.vy *= 0.98;
+			a.vx *= 0.97;
+			a.vy *= 0.97;
 
 			// Keep on screen
 			if (a.x < 50) a.vx += 0.1;
@@ -1189,11 +1376,9 @@
 			if (a.y > height - 50) a.vy -= 0.1;
 		});
 
-		// Draw field lines
+		// Draw field lines from attractors with mouse influence
 		const lineCount = 30;
-		const steps = 50;
-		ctx.strokeStyle = `rgba(60, 60, 60, ${opacity})`;
-		ctx.lineWidth = 0.8;
+		const steps = 60;
 
 		for (let l = 0; l < lineCount; l++) {
 			const startAngle = (Math.PI * 2 / lineCount) * l + time * 0.1;
@@ -1210,16 +1395,24 @@
 				let py = startY;
 
 				for (let s = 0; s < steps; s++) {
-					// Calculate field direction at this point
+					// Calculate field direction from all attractors
 					let fx = 0, fy = 0;
 					attractors.forEach((a) => {
 						const dx = a.x - px;
 						const dy = a.y - py;
 						const d = Math.sqrt(dx * dx + dy * dy) + 1;
 						const strength = a.strength / (d * d) * 5000;
-						fx += (dy / d) * strength; // Perpendicular for field lines
+						fx += (dy / d) * strength;
 						fy -= (dx / d) * strength;
 					});
+
+					// Add mouse as virtual attractor - creates visible field bending
+					const mdx = mousePosX - px;
+					const mdy = mousePosY - py;
+					const md = Math.sqrt(mdx * mdx + mdy * mdy) + 1;
+					const mStrength = mouseStrength / (md * md) * 8000 * mouseMult;
+					fx += (mdy / md) * mStrength;
+					fy -= (mdx / md) * mStrength;
 
 					// Normalize
 					const mag = Math.sqrt(fx * fx + fy * fy) + 0.001;
@@ -1232,16 +1425,95 @@
 					// Stop if out of bounds
 					if (px < 0 || px > width || py < 0 || py > height) break;
 
+					// Color and thickness based on proximity to mouse
+					const distToMouse = Math.sqrt((px - mousePosX) ** 2 + (py - mousePosY) ** 2);
+					const mouseProximity = Math.max(0, 1 - distToMouse / 200);
+
 					ctx.lineTo(px, py);
 				}
+
+				// Style based on overall proximity to mouse
+				const lineMidX = (startX + px) / 2;
+				const lineMidY = (startY + py) / 2;
+				const lineDist = Math.sqrt((lineMidX - mousePosX) ** 2 + (lineMidY - mousePosY) ** 2);
+				const lineProximity = Math.max(0, 1 - lineDist / 300);
+
+				ctx.strokeStyle = `rgba(${50 - lineProximity * 20}, ${50 - lineProximity * 20}, ${50 - lineProximity * 20}, ${opacity * (1 + lineProximity * 2)})`;
+				ctx.lineWidth = 0.8 + lineProximity * 1.5 * mouseMult;
 				ctx.stroke();
 			});
 		}
 
+		// Draw additional field lines emanating from mouse position
+		const mouseLineCount = 16;
+		const mouseSteps = 40;
+		ctx.lineWidth = 1;
+
+		for (let l = 0; l < mouseLineCount; l++) {
+			const startAngle = (Math.PI * 2 / mouseLineCount) * l + time * 0.2;
+			const startX = mousePosX + Math.cos(startAngle) * 15;
+			const startY = mousePosY + Math.sin(startAngle) * 15;
+
+			ctx.beginPath();
+			ctx.moveTo(startX, startY);
+
+			let px = startX;
+			let py = startY;
+
+			for (let s = 0; s < mouseSteps; s++) {
+				let fx = 0, fy = 0;
+
+				// Influence from all attractors
+				attractors.forEach((a) => {
+					const dx = a.x - px;
+					const dy = a.y - py;
+					const d = Math.sqrt(dx * dx + dy * dy) + 1;
+					const strength = a.strength / (d * d) * 5000;
+					fx += (dy / d) * strength;
+					fy -= (dx / d) * strength;
+				});
+
+				// Self-repulsion from mouse to push lines outward
+				const mdx = px - mousePosX;
+				const mdy = py - mousePosY;
+				const md = Math.sqrt(mdx * mdx + mdy * mdy) + 1;
+				fx += (mdx / md) * 3;
+				fy += (mdy / md) * 3;
+
+				const mag = Math.sqrt(fx * fx + fy * fy) + 0.001;
+				fx = (fx / mag) * 6;
+				fy = (fy / mag) * 6;
+
+				px += fx;
+				py += fy;
+
+				if (px < 0 || px > width || py < 0 || py > height) break;
+
+				ctx.lineTo(px, py);
+			}
+
+			ctx.strokeStyle = `rgba(45, 45, 45, ${opacity * 1.5 * mouseMult})`;
+			ctx.stroke();
+		}
+
 		// Draw attractor points
 		attractors.forEach((a) => {
-			const size = a.strength > 0 ? 8 : 6;
-			ctx.fillStyle = `rgba(60, 60, 60, ${opacity * 3})`;
+			const distToMouse = Math.sqrt((a.x - mousePosX) ** 2 + (a.y - mousePosY) ** 2);
+			const mouseProximity = Math.max(0, 1 - distToMouse / 200);
+			const size = (a.strength > 0 ? 8 : 6) + mouseProximity * 4 * mouseMult;
+
+			// Glow when near mouse
+			if (mouseProximity > 0.2) {
+				const glowGradient = ctx.createRadialGradient(a.x, a.y, 0, a.x, a.y, size * 2.5);
+				glowGradient.addColorStop(0, `rgba(50, 50, 50, ${opacity * 2 * mouseProximity})`);
+				glowGradient.addColorStop(1, 'rgba(50, 50, 50, 0)');
+				ctx.fillStyle = glowGradient;
+				ctx.beginPath();
+				ctx.arc(a.x, a.y, size * 2.5, 0, Math.PI * 2);
+				ctx.fill();
+			}
+
+			ctx.fillStyle = `rgba(50, 50, 50, ${opacity * 3 * (1 + mouseProximity)})`;
 			ctx.beginPath();
 			ctx.arc(a.x, a.y, size, 0, Math.PI * 2);
 			ctx.fill();
@@ -1258,6 +1530,37 @@
 			}
 			ctx.stroke();
 		});
+
+		// Draw mouse attractor indicator (pulsing)
+		const pulse = Math.sin(time * 3) * 0.3 + 0.7;
+		const mouseIndicatorSize = 10 * pulse * mouseMult;
+
+		// Outer glow
+		const mouseGlow = ctx.createRadialGradient(mousePosX, mousePosY, 0, mousePosX, mousePosY, mouseIndicatorSize * 3);
+		mouseGlow.addColorStop(0, `rgba(40, 40, 40, ${opacity * 2 * mouseMult})`);
+		mouseGlow.addColorStop(1, 'rgba(40, 40, 40, 0)');
+		ctx.fillStyle = mouseGlow;
+		ctx.beginPath();
+		ctx.arc(mousePosX, mousePosY, mouseIndicatorSize * 3, 0, Math.PI * 2);
+		ctx.fill();
+
+		// Inner dot
+		ctx.fillStyle = `rgba(35, 35, 35, ${opacity * 4 * mouseMult})`;
+		ctx.beginPath();
+		ctx.arc(mousePosX, mousePosY, mouseIndicatorSize * 0.5, 0, Math.PI * 2);
+		ctx.fill();
+
+		// Draw polarity indicator (+ or - based on current phase)
+		ctx.strokeStyle = `rgba(245, 242, 235, ${opacity * 6 * mouseMult})`;
+		ctx.lineWidth = 1.5;
+		ctx.beginPath();
+		ctx.moveTo(mousePosX - 5, mousePosY);
+		ctx.lineTo(mousePosX + 5, mousePosY);
+		if (mouseStrength > 0) {
+			ctx.moveTo(mousePosX, mousePosY - 5);
+			ctx.lineTo(mousePosX, mousePosY + 5);
+		}
+		ctx.stroke();
 	}
 
 	// ============================================
@@ -1748,10 +2051,10 @@
 	// 19. PLASMA WAVE
 	// ============================================
 	function drawPlasmaWave(ctx: CanvasRenderingContext2D, seed: number) {
-		const opacity = 0.06 * opacityMultiplier * patternConfig.opacity;
+		const opacity = 0.12 * opacityMultiplier * patternConfig.opacity;
 		const speedMult = patternConfig.speed;
 		const mouseMult = patternConfig.mouseInfluence;
-		const resolution = 8; // Pixel size for performance
+		const resolution = 6; // Smaller for better quality
 
 		// Plasma formula using multiple sine waves
 		for (let x = 0; x < width; x += resolution) {
@@ -1759,26 +2062,29 @@
 				const nx = x / width;
 				const ny = y / height;
 
-				// Multiple wave interference
-				const wave1 = Math.sin(nx * 10 + time * speedMult);
-				const wave2 = Math.sin(ny * 8 + time * 0.8 * speedMult);
-				const wave3 = Math.sin((nx + ny) * 6 + time * 0.6 * speedMult);
-				const wave4 = Math.sin(Math.sqrt((nx - 0.5) ** 2 + (ny - 0.5) ** 2) * 15 + time * 1.2 * speedMult);
+				// Multiple wave interference with varied frequencies
+				const wave1 = Math.sin(nx * 12 + time * speedMult * 0.8);
+				const wave2 = Math.sin(ny * 10 + time * 0.7 * speedMult);
+				const wave3 = Math.sin((nx + ny) * 8 + time * 0.5 * speedMult);
+				const wave4 = Math.sin(Math.sqrt((nx - 0.5) ** 2 + (ny - 0.5) ** 2) * 18 + time * speedMult);
+				const wave5 = Math.sin(nx * ny * 20 + time * 0.4 * speedMult);
 
-				// Mouse influence - create ripple
+				// Enhanced mouse influence - stronger ripple effect
 				const dx = nx - mouseX;
 				const dy = ny - mouseY;
 				const mouseDist = Math.sqrt(dx * dx + dy * dy);
-				const mouseWave = Math.sin(mouseDist * 20 - time * 3 * speedMult) * mouseMult * (1 - mouseDist);
+				const mouseRadius = 0.4; // Larger influence radius
+				const mouseStrength = Math.max(0, 1 - mouseDist / mouseRadius);
+				const mouseWave = Math.sin(mouseDist * 30 - time * 4 * speedMult) * mouseMult * mouseStrength * 2;
 
-				// Combine waves
-				const value = (wave1 + wave2 + wave3 + wave4 + mouseWave) / 5;
+				// Combine waves with mouse having stronger influence
+				const value = (wave1 + wave2 + wave3 + wave4 + wave5 + mouseWave * 2) / 6;
 
-				// Map to grayscale intensity
+				// Map to grayscale with more contrast
 				const intensity = (value + 1) / 2; // 0 to 1
-				const gray = Math.floor(50 + intensity * 30);
+				const gray = Math.floor(30 + intensity * 60);
 
-				ctx.fillStyle = `rgba(${gray}, ${gray}, ${gray}, ${opacity * (0.5 + intensity * 0.5)})`;
+				ctx.fillStyle = `rgba(${gray}, ${gray}, ${gray}, ${opacity * (0.4 + intensity * 0.6)})`;
 				ctx.fillRect(x, y, resolution, resolution);
 			}
 		}
@@ -2022,6 +2328,8 @@
 		if (!browser) return;
 		window.addEventListener('resize', resizeCanvas);
 		document.addEventListener('visibilitychange', handleVisibilityChange);
+		// Mark as initialized - allows store subscriptions to trigger transitions
+		isInitialized = true;
 	});
 
 	onDestroy(() => {

@@ -2,9 +2,8 @@
 - name: Enhance CV Site with Better Styling and Features
   hosts: local
   gather_facts: no
+  # Variables loaded from ansible/inventory/group_vars/all.yml
   vars:
-    project_dir: "/Users/ivankokalovic/Documents/GitHub/Lebenslauf"
-    docs_dir: "{{ project_dir }}/docs"
     assets_dir: "{{ docs_dir }}/assets"
   
   tasks:

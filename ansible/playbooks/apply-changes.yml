@@ -2,9 +2,7 @@
 - name: Apply Changes to Running Site
   hosts: local
   gather_facts: no
-  vars:
-    project_dir: "/Users/ivankokalovic/Documents/GitHub/Lebenslauf"
-    venv_dir: "{{ project_dir }}/venv"
+  # Variables loaded from ansible/inventory/group_vars/all.yml
   
   tasks:
     - name: Rebuild site with changes
