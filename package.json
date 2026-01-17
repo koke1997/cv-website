@@ -6,11 +6,11 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/koke1997/Lebenslauf.git"
+    "url": "git+https://github.com/koke1997/cv-website.git"
   },
-  "homepage": "https://koke1997.github.io/Lebenslauf/",
+  "homepage": "https://koke1997.github.io/cv-website/",
   "bugs": {
-    "url": "https://github.com/koke1997/Lebenslauf/issues"
+    "url": "https://github.com/koke1997/cv-website/issues"
   },
   "keywords": [
     "cv",
