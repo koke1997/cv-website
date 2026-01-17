@@ -1,19 +1,20 @@
 # CV - Ivan Kokalovic
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![GitHub release](https://img.shields.io/github/v/release/koke1997/Lebenslauf)](https://github.com/koke1997/Lebenslauf/releases)
-[![GitHub Package](https://img.shields.io/github/v/release/koke1997/Lebenslauf?label=npm)](https://github.com/koke1997/Lebenslauf/packages)
-[![Deploy](https://github.com/koke1997/Lebenslauf/actions/workflows/deploy.yml/badge.svg)](https://github.com/koke1997/Lebenslauf/actions/workflows/deploy.yml)
+[![GitHub release](https://img.shields.io/github/v/release/koke1997/cv-website)](https://github.com/koke1997/cv-website/releases)
+[![GitHub Package](https://img.shields.io/github/v/release/koke1997/cv-website?label=npm)](https://github.com/koke1997/cv-website/packages)
+[![Deploy](https://github.com/koke1997/cv-website/actions/workflows/deploy.yml/badge.svg)](https://github.com/koke1997/cv-website/actions/workflows/deploy.yml)
+[![pages-build-deployment](https://github.com/koke1997/cv-website/actions/workflows/pages/pages-build-deployment/badge.svg)](https://github.com/koke1997/cv-website/actions/workflows/pages/pages-build-deployment)
 
 Professional CV website built with RenderCV and SvelteKit, deployed on GitHub Pages.
 
 ## Live Site
 
-**[https://koke1997.github.io/Lebenslauf/](https://koke1997.github.io/Lebenslauf/)**
+**[https://koke1997.github.io/cv-website/](https://koke1997.github.io/cv-website/)**
 
 ## Downloads
 
-Get the latest CV from [Releases](https://github.com/koke1997/Lebenslauf/releases):
+Get the latest CV from [Releases](https://github.com/koke1997/cv-website/releases):
 - **PDF** - Best for viewing and printing
 - **DOCX** - Best for ATS systems and editing
 
@@ -73,8 +74,8 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed instructions.
 
 ```bash
 # Clone the repository
-git clone https://github.com/koke1997/Lebenslauf.git
-cd Lebenslauf
+git clone https://github.com/koke1997/cv-website.git
+cd cv-website
 
 # Create virtual environment
 python3 -m venv venv
