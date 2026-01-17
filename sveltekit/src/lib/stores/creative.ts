@@ -67,9 +67,10 @@ function createPatternConfigStore() {
 
 export const patternConfig = createPatternConfigStore();
 
-// All available art patterns (20 total)
+// All available art patterns (25 total - includes Wasm physics engine)
 // Icons are SVG identifiers - rendered in PatternConfigPanel.svelte
 export const ART_PATTERNS = [
+	{ id: 'wasm', name: 'Wasm Physics', icon: 'wasm', isWasm: true },
 	{ id: 'particles', name: 'Particle Network', icon: 'particles' },
 	{ id: 'flow', name: 'Flow Field', icon: 'flow' },
 	{ id: 'gradient', name: 'Gradient Mesh', icon: 'gradient' },
@@ -86,10 +87,14 @@ export const ART_PATTERNS = [
 	{ id: 'spiral', name: 'Spiral Galaxy', icon: 'spiral' },
 	{ id: 'lattice', name: 'Liquid Lattice', icon: 'lattice' },
 	{ id: 'aurora', name: 'Aurora Borealis', icon: 'aurora' },
-	{ id: 'rain', name: 'Matrix Rain', icon: 'rain' },
 	{ id: 'circuit', name: 'Circuit Board', icon: 'circuit' },
 	{ id: 'plasma', name: 'Plasma Wave', icon: 'plasma' },
-	{ id: 'noise', name: 'Perlin Noise', icon: 'noise' }
+	{ id: 'noise', name: 'Perlin Noise', icon: 'noise' },
+	{ id: 'metaballs', name: 'Metaballs', icon: 'metaballs' },
+	{ id: 'lightning', name: 'Lightning', icon: 'lightning' },
+	{ id: 'terrain', name: 'Terrain Map', icon: 'terrain' },
+	{ id: 'kaleidoscope', name: 'Kaleidoscope', icon: 'kaleidoscope' },
+	{ id: 'matrix', name: 'Matrix Rain', icon: 'matrix' }
 ] as const;
 
 export type ArtPatternId = typeof ART_PATTERNS[number]['id'];

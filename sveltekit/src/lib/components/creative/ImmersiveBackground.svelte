@@ -2,6 +2,7 @@
 	import { onMount, onDestroy } from 'svelte';
 	import { browser } from '$app/environment';
 	import { creativeChapter, patternConfig as patternConfigStore, selectedPattern as selectedPatternStore, type PatternConfig, type ArtPatternId } from '$lib/stores/creative';
+	import WasmParticles from './WasmParticles.svelte';
 
 	interface Props {
 		currentRoute?: string;
@@ -13,8 +14,13 @@
 
 	// Subscribe to creative chapter store for /creative page
 	let storeChapter = $state(1);
+	// Store unsubscribe functions to prevent memory leaks
+	let unsubscribeChapter: (() => void) | undefined;
+	let unsubscribePattern: (() => void) | undefined;
+	let unsubscribeConfig: (() => void) | undefined;
+
 	if (browser) {
-		creativeChapter.subscribe((value) => {
+		unsubscribeChapter = creativeChapter.subscribe((value) => {
 			storeChapter = value;
 		});
 	}
@@ -29,10 +35,14 @@
 	let width = 0;
 	let height = 0;
 
-	// Art style types (20 total)
-	type ArtStyle = 'particles' | 'flow' | 'gradient' | 'constellation' | 'ripple' | 'grid' |
+	// Art style types (20 total - includes Wasm physics engine)
+	type ArtStyle = 'wasm' | 'particles' | 'flow' | 'gradient' | 'constellation' | 'ripple' | 'grid' |
 		'voronoi' | 'waves' | 'hexagon' | 'orbits' | 'bokeh' | 'curves' |
-		'magnetic' | 'spiral' | 'lattice' | 'aurora' | 'rain' | 'circuit' | 'plasma' | 'noise';
+		'magnetic' | 'spiral' | 'lattice' | 'aurora' | 'circuit' | 'plasma' | 'noise' |
+		'metaballs' | 'lightning' | 'terrain' | 'kaleidoscope' | 'matrix';
+
+	// Track if Wasm pattern is active (handled by separate component)
+	let isWasmActive = $state(false);
 
 	// Current style state (declared early for use in subscriptions)
 	let currentStyle = $state<ArtStyle>('particles');
@@ -43,7 +53,7 @@
 	// Subscribe to selectedPattern store for manual override
 	let selectedPatternOverride = $state<ArtPatternId | null>(null);
 	if (browser) {
-		selectedPatternStore.subscribe((value) => {
+		unsubscribePattern = selectedPatternStore.subscribe((value) => {
 			selectedPatternOverride = value;
 			// When user selects a pattern, trigger a transition (only after initialization)
 			if (isInitialized && value && value !== currentStyle) {
@@ -61,7 +71,7 @@
 	});
 
 	if (browser) {
-		patternConfigStore.subscribe((value) => {
+		unsubscribeConfig = patternConfigStore.subscribe((value) => {
 			patternConfig = value;
 		});
 	}
@@ -82,9 +92,10 @@
 	// For Creative page, map chapters to different styles (all 20 patterns)
 	function getCreativeChapterStyle(chapter: number): ArtStyle {
 		const styles: ArtStyle[] = [
-			'particles', 'flow', 'gradient', 'constellation', 'ripple', 'grid',
+			'wasm', 'particles', 'flow', 'gradient', 'constellation', 'ripple', 'grid',
 			'voronoi', 'waves', 'hexagon', 'orbits', 'bokeh', 'curves',
-			'magnetic', 'spiral', 'lattice', 'aurora', 'rain', 'circuit', 'plasma', 'noise'
+			'magnetic', 'spiral', 'lattice', 'aurora', 'circuit', 'plasma', 'noise',
+			'metaballs', 'lightning', 'terrain', 'kaleidoscope', 'matrix'
 		];
 		return styles[(chapter - 1) % styles.length];
 	}
@@ -201,6 +212,113 @@
 	}
 	let latticeNodes: LatticeNode[] = [];
 	let latticeNodesPrev: LatticeNode[] = [];
+
+	// Metaball particles
+	interface Metaball {
+		x: number;
+		y: number;
+		vx: number;
+		vy: number;
+		radius: number;
+	}
+	let metaballs: Metaball[] = [];
+	let metaballsPrev: Metaball[] = [];
+
+	// Lightning bolt structures
+	interface LightningBolt {
+		startX: number;
+		startY: number;
+		endX: number;
+		endY: number;
+		intensity: number;
+		lifetime: number;
+		age: number;
+	}
+	let lightningBolts: LightningBolt[] = [];
+
+	// Matrix rain columns
+	interface RainColumn {
+		x: number;
+		y: number;
+		speed: number;
+		length: number;
+		chars: string[];
+	}
+	let rainColumns: RainColumn[] = [];
+
+	// Kaleidoscope particles
+	interface KaleidoParticle {
+		angle: number;
+		distance: number;
+		speed: number;
+		size: number;
+	}
+	let kaleidoParticles: KaleidoParticle[] = [];
+
+	// ============================================
+	// SPATIAL GRID - O(n) neighbor lookup
+	// ============================================
+	class SpatialGrid<T extends { x: number; y: number }> {
+		private cells: Map<string, T[]> = new Map();
+		private cellSize: number;
+
+		constructor(cellSize: number) {
+			this.cellSize = cellSize;
+		}
+
+		private getKey(x: number, y: number): string {
+			const cx = Math.floor(x / this.cellSize);
+			const cy = Math.floor(y / this.cellSize);
+			return `${cx},${cy}`;
+		}
+
+		clear(): void {
+			this.cells.clear();
+		}
+
+		insert(item: T): void {
+			const key = this.getKey(item.x, item.y);
+			const cell = this.cells.get(key);
+			if (cell) {
+				cell.push(item);
+			} else {
+				this.cells.set(key, [item]);
+			}
+		}
+
+		insertAll(items: T[]): void {
+			this.clear();
+			items.forEach(item => this.insert(item));
+		}
+
+		getNeighbors(x: number, y: number, radius: number): T[] {
+			const neighbors: T[] = [];
+			const cellRadius = Math.ceil(radius / this.cellSize);
+			const cx = Math.floor(x / this.cellSize);
+			const cy = Math.floor(y / this.cellSize);
+			const radiusSq = radius * radius;
+
+			for (let i = cx - cellRadius; i <= cx + cellRadius; i++) {
+				for (let j = cy - cellRadius; j <= cy + cellRadius; j++) {
+					const cell = this.cells.get(`${i},${j}`);
+					if (cell) {
+						for (const item of cell) {
+							const dx = item.x - x;
+							const dy = item.y - y;
+							if (dx * dx + dy * dy <= radiusSq) {
+								neighbors.push(item);
+							}
+						}
+					}
+				}
+			}
+			return neighbors;
+		}
+	}
+
+	// Reusable spatial grids (created once, reused each frame)
+	let particleGrid: SpatialGrid<Particle> | null = null;
+	let voronoiGrid: SpatialGrid<VoronoiSeed & { index: number }> | null = null;
 
 	// Mulberry32 PRNG
 	function createRandom(seed: number) {
@@ -359,6 +477,82 @@
 		return result;
 	}
 
+	// Initialize metaballs
+	function initMetaballs(count: number, seed: number): Metaball[] {
+		const rand = createRandom(seed);
+		const result: Metaball[] = [];
+		for (let i = 0; i < count; i++) {
+			result.push({
+				x: rand() * width,
+				y: rand() * height,
+				vx: (rand() - 0.5) * 1.5,
+				vy: (rand() - 0.5) * 1.5,
+				radius: rand() * 60 + 40
+			});
+		}
+		return result;
+	}
+
+	// Initialize lightning bolts
+	function initLightningBolts(count: number, seed: number): LightningBolt[] {
+		const rand = createRandom(seed);
+		const result: LightningBolt[] = [];
+		for (let i = 0; i < count; i++) {
+			result.push({
+				startX: rand() * width,
+				startY: rand() * height * 0.3,
+				endX: rand() * width,
+				endY: rand() * height * 0.7 + height * 0.3,
+				intensity: rand() * 0.5 + 0.5,
+				lifetime: rand() * 0.5 + 0.3,
+				age: rand() * 2
+			});
+		}
+		return result;
+	}
+
+	// Initialize matrix rain columns
+	function initRainColumns(seed: number): RainColumn[] {
+		const rand = createRandom(seed);
+		const result: RainColumn[] = [];
+		const charSize = 14;
+		const columns = Math.ceil(width / charSize);
+		// Binary and ASCII characters only - no Asian characters
+		const chars = '01010101~-=|_+*><{}[]()#@$%&!?/\\^';
+
+		for (let i = 0; i < columns; i++) {
+			const charArray: string[] = [];
+			const len = 10 + Math.floor(rand() * 20);
+			for (let j = 0; j < 30; j++) {
+				charArray.push(chars[Math.floor(rand() * chars.length)]);
+			}
+			result.push({
+				x: i * charSize,
+				y: rand() * height,
+				speed: 2 + rand() * 4,
+				length: len,
+				chars: charArray
+			});
+		}
+		return result;
+	}
+
+	// Initialize kaleidoscope particles
+	function initKaleidoParticles(count: number, seed: number): KaleidoParticle[] {
+		const rand = createRandom(seed);
+		const result: KaleidoParticle[] = [];
+		const maxRadius = Math.min(width, height) * 0.4;
+		for (let i = 0; i < count; i++) {
+			result.push({
+				angle: rand() * Math.PI * 2,
+				distance: rand() * maxRadius,
+				speed: (rand() - 0.5) * 0.02,
+				size: rand() * 4 + 2
+			});
+		}
+		return result;
+	}
+
 	// Start transition to new style
 	function startTransition(newStyle: ArtStyle) {
 		if (currentStyle === newStyle) return;
@@ -373,13 +567,26 @@
 		magneticAttractorsPrev = [...magneticAttractors];
 		spiralParticlesPrev = [...spiralParticles];
 		latticeNodesPrev = [...latticeNodes];
+		metaballsPrev = [...metaballs];
 
 		// Set new style
 		currentStyle = newStyle;
 		artSeed = Date.now() + Math.random() * 100000;
 
-		// Initialize new art state
-		initializeArtState();
+		// Check if switching to/from Wasm pattern
+		const wasWasm = isWasmActive;
+		isWasmActive = newStyle === 'wasm';
+
+		// Reset animation state when switching from Wasm to Canvas2D
+		// This ensures the canvas gets properly initialized
+		if (wasWasm && !isWasmActive) {
+			animationStarted = false;
+		}
+
+		// Initialize new art state (skip for Wasm as it handles its own state)
+		if (newStyle !== 'wasm') {
+			initializeArtState();
+		}
 
 		// Start transition
 		isTransitioning = true;
@@ -402,8 +609,15 @@
 			} else {
 				currentStyle = getArtStyle(currentRoute);
 			}
+			// Check if initial style is Wasm
+			const wasWasm = isWasmActive;
+			isWasmActive = currentStyle === 'wasm';
+			// Reset animation if switching from Wasm
+			if (wasWasm && !isWasmActive) {
+				animationStarted = false;
+			}
 			artSeed = Date.now() + Math.random() * 100000;
-			if (width > 0 && height > 0) {
+			if (width > 0 && height > 0 && !isWasmActive) {
 				initializeArtState();
 			}
 		} else if (routeChanged) {
@@ -477,10 +691,6 @@
 			case 'aurora':
 				// Aurora doesn't need state init (calculated on-the-fly)
 				break;
-			case 'rain':
-				// Reset rain drops - will be reinitialized in draw function
-				rainDrops = [];
-				break;
 			case 'circuit':
 				// Reset circuit nodes - will be reinitialized in draw function
 				circuitNodes = [];
@@ -490,6 +700,21 @@
 				break;
 			case 'noise':
 				// Perlin noise doesn't need state init (calculated on-the-fly)
+				break;
+			case 'metaballs':
+				metaballs = initMetaballs(Math.round(8 * densityMult), artSeed);
+				break;
+			case 'lightning':
+				lightningBolts = initLightningBolts(Math.round(5 * densityMult), artSeed);
+				break;
+			case 'terrain':
+				// Terrain doesn't need state init (calculated on-the-fly)
+				break;
+			case 'kaleidoscope':
+				kaleidoParticles = initKaleidoParticles(Math.round(50 * densityMult), artSeed);
+				break;
+			case 'matrix':
+				rainColumns = initRainColumns(artSeed);
 				break;
 		}
 	}
@@ -549,23 +774,47 @@
 			if (p.y > height) p.y = 0;
 		});
 
-		// Draw connections
+		// Draw connections using spatial grid for O(n) performance
 		ctx.strokeStyle = `rgba(60, 60, 60, ${opacity * 0.4})`;
 		ctx.lineWidth = 0.5;
-		for (let i = 0; i < particleList.length; i++) {
-			for (let j = i + 1; j < particleList.length; j++) {
-				const dx = particleList[i].x - particleList[j].x;
-				const dy = particleList[i].y - particleList[j].y;
+
+		// Initialize or reuse spatial grid
+		if (!particleGrid) {
+			particleGrid = new SpatialGrid<Particle>(connectionDist);
+		}
+		particleGrid.insertAll(particleList);
+
+		// Track drawn connections to avoid duplicates
+		const drawnConnections = new Set<string>();
+		// Create index map for O(1) lookups instead of O(n) indexOf calls
+		const particleIndexMap = new Map<Particle, number>();
+		particleList.forEach((p, idx) => particleIndexMap.set(p, idx));
+
+		particleList.forEach((p, i) => {
+			const neighbors = particleGrid!.getNeighbors(p.x, p.y, connectionDist);
+			neighbors.forEach((other) => {
+				if (other === p) return;
+				// Create unique connection key (smaller index first)
+				// Use `i` directly for p, and Map lookup for other (O(1) instead of O(n))
+				const pi = i;
+				const oi = particleIndexMap.get(other);
+				if (oi === undefined) return; // Safety check
+				const key = pi < oi ? `${pi}-${oi}` : `${oi}-${pi}`;
+				if (drawnConnections.has(key)) return;
+				drawnConnections.add(key);
+
+				const dx = p.x - other.x;
+				const dy = p.y - other.y;
 				const dist = Math.sqrt(dx * dx + dy * dy);
 				if (dist < connectionDist) {
 					ctx.globalAlpha = (1 - dist / connectionDist) * opacity;
 					ctx.beginPath();
-					ctx.moveTo(particleList[i].x, particleList[i].y);
-					ctx.lineTo(particleList[j].x, particleList[j].y);
+					ctx.moveTo(p.x, p.y);
+					ctx.lineTo(other.x, other.y);
 					ctx.stroke();
 				}
-			}
-		}
+			});
+		});
 
 		// Draw particles
 		ctx.globalAlpha = 1;
@@ -628,7 +877,7 @@
 		const mouseMult = patternConfig.mouseInfluence;
 
 		// Update blobs
-		blobList.forEach((b) => {
+		blobList.forEach((b, i) => {
 			// Mouse repulsion
 			const dx = mouseX * width - b.x;
 			const dy = mouseY * height - b.y;
@@ -650,15 +899,37 @@
 			if (b.y > height + b.radius) b.y = -b.radius;
 		});
 
-		// Draw soft gradient blobs
-		blobList.forEach((b) => {
+		// Draw soft gradient blobs with color variation
+		blobList.forEach((b, i) => {
 			const adjustedOpacity = b.opacity * opacityMultiplier * patternConfig.opacity;
-			const gradient = ctx.createRadialGradient(b.x, b.y, 0, b.x, b.y, b.radius);
-			gradient.addColorStop(0, `rgba(80, 80, 80, ${adjustedOpacity})`);
-			gradient.addColorStop(0.5, `rgba(80, 80, 80, ${adjustedOpacity * 0.5})`);
-			gradient.addColorStop(1, 'rgba(80, 80, 80, 0)');
+
+			// Add subtle warm/cool color variation based on position
+			const hueShift = (b.x / width) * 15 - 7.5; // -7.5 to +7.5 degrees
+			const vertShift = (b.y / height) * 10 - 5; // Additional vertical variation
+			const baseGray = 75;
+
+			// Warm tones on left (slightly red), cool on right (slightly blue)
+			const r = Math.max(0, Math.min(255, baseGray + hueShift + Math.sin(time * 0.3 + i) * 3));
+			const g = baseGray;
+			const b_color = Math.max(0, Math.min(255, baseGray - hueShift + vertShift));
+
+			// Variable radius for depth effect
+			const depthPulse = 1 + Math.sin(time * 0.2 + i * 1.5) * 0.1;
+			const effectiveRadius = b.radius * depthPulse;
+
+			const gradient = ctx.createRadialGradient(b.x, b.y, 0, b.x, b.y, effectiveRadius);
+
+			// 7-stop gradient for richer depth and smoother falloff
+			gradient.addColorStop(0, `rgba(${r + 15}, ${g + 15}, ${b_color + 15}, ${adjustedOpacity})`);
+			gradient.addColorStop(0.15, `rgba(${r + 10}, ${g + 10}, ${b_color + 10}, ${adjustedOpacity * 0.85})`);
+			gradient.addColorStop(0.3, `rgba(${r + 5}, ${g + 5}, ${b_color + 5}, ${adjustedOpacity * 0.65})`);
+			gradient.addColorStop(0.5, `rgba(${r}, ${g}, ${b_color}, ${adjustedOpacity * 0.45})`);
+			gradient.addColorStop(0.7, `rgba(${r - 5}, ${g - 5}, ${b_color - 5}, ${adjustedOpacity * 0.25})`);
+			gradient.addColorStop(0.85, `rgba(${r - 10}, ${g - 10}, ${b_color - 10}, ${adjustedOpacity * 0.1})`);
+			gradient.addColorStop(1, `rgba(${r - 15}, ${g - 15}, ${b_color - 15}, 0)`);
+
 			ctx.fillStyle = gradient;
-			ctx.fillRect(b.x - b.radius, b.y - b.radius, b.radius * 2, b.radius * 2);
+			ctx.fillRect(b.x - effectiveRadius, b.y - effectiveRadius, effectiveRadius * 2, effectiveRadius * 2);
 		});
 	}
 
@@ -699,19 +970,28 @@
 		});
 
 		// Draw connections to nearest 2-3 neighbors with mouse highlighting
-		particleList.forEach((p, i) => {
-			// Find nearest neighbors
-			const distances = particleList
-				.map((other, j) => ({
-					j,
+		// Use spatial grid for O(n) neighbor lookup instead of O(n² log n)
+		if (!particleGrid) {
+			particleGrid = new SpatialGrid<Particle>(connectionDist);
+		}
+		particleGrid.insertAll(particleList);
+
+		particleList.forEach((p) => {
+			// Get nearby neighbors from spatial grid (O(1) per particle)
+			const neighbors = particleGrid!.getNeighbors(p.x, p.y, connectionDist);
+
+			// Find 3 closest from the nearby set (much smaller than full list)
+			const closest = neighbors
+				.filter(other => other !== p)
+				.map(other => ({
+					other,
 					dist: Math.sqrt((p.x - other.x) ** 2 + (p.y - other.y) ** 2)
 				}))
-				.filter((d) => d.j !== i && d.dist < connectionDist)
+				.filter(d => d.dist < connectionDist)
 				.sort((a, b) => a.dist - b.dist)
 				.slice(0, 3);
 
-			distances.forEach((d) => {
-				const other = particleList[d.j];
+			closest.forEach(({ other, dist }) => {
 				// Check if connection line is near mouse
 				const midX = (p.x + other.x) / 2;
 				const midY = (p.y + other.y) / 2;
@@ -719,7 +999,7 @@
 				const mouseNearLine = distMidToMouse < mouseInfluenceRadius * 0.6;
 
 				// Highlight connections near mouse
-				const baseAlpha = (1 - d.dist / connectionDist) * opacity;
+				const baseAlpha = (1 - dist / connectionDist) * opacity;
 				const highlightBoost = mouseNearLine ? (1 - distMidToMouse / (mouseInfluenceRadius * 0.6)) * mouseMult * 2 : 0;
 
 				ctx.strokeStyle = mouseNearLine
@@ -947,48 +1227,88 @@
 			if (s.y > height + 50) s.y = -50;
 		});
 
-		// Draw Voronoi edges by sampling points
-		const step = 20;
-		ctx.strokeStyle = `rgba(60, 60, 60, ${opacity})`;
-		ctx.lineWidth = 1;
+		// Draw Voronoi with cell fills and edges
+		const step = 10; // Reduced from 20 for finer detail
 		ctx.globalAlpha = 1;
+
+		// Build spatial grid with seed indices
+		const maxSearchRadius = Math.max(width, height) * 0.3;
+		const gridCellSize = maxSearchRadius / 2;
+
+		if (!voronoiGrid) {
+			voronoiGrid = new SpatialGrid<VoronoiSeed & { index: number }>(gridCellSize);
+		}
+		voronoiGrid.clear();
+		seeds.forEach((s, i) => {
+			voronoiGrid!.insert({ ...s, index: i });
+		});
 
 		for (let x = 0; x < width; x += step) {
 			for (let y = 0; y < height; y += step) {
-				// Find two closest seeds
-				let closest1 = 0, closest2 = 1;
+				// Find closest seed and second closest
 				let dist1 = Infinity, dist2 = Infinity;
+				let closestIndex = 0;
 
-				seeds.forEach((s, i) => {
+				// Get nearby seeds (expand radius if needed)
+				let searchRadius = gridCellSize;
+				let nearbySeeds = voronoiGrid.getNeighbors(x, y, searchRadius);
+
+				while (nearbySeeds.length < 2 && searchRadius < maxSearchRadius) {
+					searchRadius *= 2;
+					nearbySeeds = voronoiGrid.getNeighbors(x, y, searchRadius);
+				}
+
+				if (nearbySeeds.length < 2) {
+					nearbySeeds = seeds.map((s, i) => ({ ...s, index: i }));
+				}
+
+				nearbySeeds.forEach((s) => {
 					const d = Math.sqrt((x - s.x) ** 2 + (y - s.y) ** 2);
 					if (d < dist1) {
 						dist2 = dist1;
-						closest2 = closest1;
 						dist1 = d;
-						closest1 = i;
+						closestIndex = s.index;
 					} else if (d < dist2) {
 						dist2 = d;
-						closest2 = i;
 					}
 				});
 
-				// If close to edge (similar distances), draw point
+				// Calculate edge proximity
 				const edgeness = Math.abs(dist1 - dist2) / step;
-				if (edgeness < 1.2) {
-					const alpha = (1 - edgeness / 1.2) * opacity;
-					ctx.fillStyle = `rgba(60, 60, 60, ${alpha})`;
-					ctx.beginPath();
-					ctx.arc(x, y, 1.5, 0, Math.PI * 2);
-					ctx.fill();
+
+				// Cell color variation based on seed index (golden angle distribution)
+				const cellBrightness = 60 + (closestIndex * 7) % 20; // 60-80 range
+
+				if (edgeness >= 1.0) {
+					// Interior of cell - subtle fill with cell-specific shade
+					ctx.fillStyle = `rgba(${cellBrightness}, ${cellBrightness}, ${cellBrightness}, ${opacity * 0.35})`;
+					ctx.fillRect(x, y, step, step);
+				} else {
+					// Edge of cell - darker, sharper line
+					const edgeAlpha = (1 - edgeness / 1.0) * opacity * 1.5;
+					ctx.fillStyle = `rgba(40, 40, 40, ${edgeAlpha})`;
+					ctx.fillRect(x, y, step, step);
 				}
 			}
 		}
 
-		// Draw seed points
-		ctx.fillStyle = `rgba(60, 60, 60, ${opacity * 1.5})`;
-		seeds.forEach((s) => {
+		// Draw seed points with glow effect
+		seeds.forEach((s, i) => {
+			// Outer glow
+			const glowGradient = ctx.createRadialGradient(s.x, s.y, 0, s.x, s.y, 15);
+			glowGradient.addColorStop(0, `rgba(70, 70, 70, ${opacity * 0.5})`);
+			glowGradient.addColorStop(0.5, `rgba(65, 65, 65, ${opacity * 0.2})`);
+			glowGradient.addColorStop(1, `rgba(60, 60, 60, 0)`);
+
+			ctx.fillStyle = glowGradient;
 			ctx.beginPath();
-			ctx.arc(s.x, s.y, 3, 0, Math.PI * 2);
+			ctx.arc(s.x, s.y, 15, 0, Math.PI * 2);
+			ctx.fill();
+
+			// Inner solid point
+			ctx.fillStyle = `rgba(50, 50, 50, ${opacity * 2})`;
+			ctx.beginPath();
+			ctx.arc(s.x, s.y, 4, 0, Math.PI * 2);
 			ctx.fill();
 		});
 	}
@@ -1169,7 +1489,7 @@
 		const mouseMult = patternConfig.mouseInfluence;
 
 		// Update orbs
-		orbs.forEach((o) => {
+		orbs.forEach((o, i) => {
 			// Gentle mouse attraction
 			const dx = mouseX * width - o.x;
 			const dy = mouseY * height - o.y;
@@ -1191,18 +1511,49 @@
 			if (o.y > height + o.radius) o.y = -o.radius;
 		});
 
-		// Draw orbs with soft gradients
-		orbs.forEach((o) => {
-			const adjustedOpacity = o.opacity * opacityMultiplier * patternConfig.opacity;
-			const gradient = ctx.createRadialGradient(o.x, o.y, 0, o.x, o.y, o.radius);
-			gradient.addColorStop(0, `rgba(70, 70, 70, ${adjustedOpacity})`);
-			gradient.addColorStop(0.3, `rgba(70, 70, 70, ${adjustedOpacity * 0.6})`);
-			gradient.addColorStop(0.6, `rgba(70, 70, 70, ${adjustedOpacity * 0.2})`);
-			gradient.addColorStop(1, 'rgba(70, 70, 70, 0)');
+		// Sort orbs by opacity (lower opacity = further away, draw first for depth)
+		const sortedOrbs = [...orbs].sort((a, b) => a.opacity - b.opacity);
 
-			ctx.fillStyle = gradient;
+		// Draw orbs with bokeh-characteristic gradients
+		sortedOrbs.forEach((o, i) => {
+			const adjustedOpacity = o.opacity * opacityMultiplier * patternConfig.opacity;
+
+			// Depth factor: lower opacity = smaller (further away)
+			const depthFactor = 0.6 + (o.opacity / 0.06) * 0.4;
+			const effectiveRadius = o.radius * depthFactor;
+
+			// Subtle color tinting based on position (warm/cool)
+			const warmth = (o.x / width) * 10 - 5;
+			const baseGray = 85;
+			const r = Math.round(baseGray + warmth);
+			const g = baseGray;
+			const b = Math.round(baseGray - warmth);
+
+			// Draw outer soft glow first (out-of-focus ring characteristic of bokeh)
+			const outerGlow = ctx.createRadialGradient(o.x, o.y, effectiveRadius * 0.7, o.x, o.y, effectiveRadius);
+			outerGlow.addColorStop(0, `rgba(${r - 10}, ${g - 10}, ${b - 10}, 0)`);
+			outerGlow.addColorStop(0.5, `rgba(${r - 5}, ${g - 5}, ${b - 5}, ${adjustedOpacity * 0.15})`);
+			outerGlow.addColorStop(0.85, `rgba(${r}, ${g}, ${b}, ${adjustedOpacity * 0.2})`);
+			outerGlow.addColorStop(1, `rgba(${r - 10}, ${g - 10}, ${b - 10}, 0)`);
+
+			ctx.fillStyle = outerGlow;
 			ctx.beginPath();
-			ctx.arc(o.x, o.y, o.radius, 0, Math.PI * 2);
+			ctx.arc(o.x, o.y, effectiveRadius, 0, Math.PI * 2);
+			ctx.fill();
+
+			// Draw main orb with bright center (bokeh highlight characteristic)
+			const mainGradient = ctx.createRadialGradient(o.x, o.y, 0, o.x, o.y, effectiveRadius * 0.8);
+			// Bright white/light core
+			mainGradient.addColorStop(0, `rgba(255, 255, 255, ${adjustedOpacity * 0.35})`);
+			mainGradient.addColorStop(0.1, `rgba(200, 200, 200, ${adjustedOpacity * 0.3})`);
+			mainGradient.addColorStop(0.25, `rgba(${r + 20}, ${g + 20}, ${b + 20}, ${adjustedOpacity * 0.25})`);
+			mainGradient.addColorStop(0.5, `rgba(${r + 10}, ${g + 10}, ${b + 10}, ${adjustedOpacity * 0.15})`);
+			mainGradient.addColorStop(0.75, `rgba(${r}, ${g}, ${b}, ${adjustedOpacity * 0.08})`);
+			mainGradient.addColorStop(1, `rgba(${r - 10}, ${g - 10}, ${b - 10}, 0)`);
+
+			ctx.fillStyle = mainGradient;
+			ctx.beginPath();
+			ctx.arc(o.x, o.y, effectiveRadius * 0.8, 0, Math.PI * 2);
 			ctx.fill();
 		});
 	}
@@ -1753,10 +2104,11 @@
 		// Mouse influence on aurora center
 		const mouseOffsetX = (mouseX - 0.5) * 200 * mouseMult;
 
-		// Draw flowing aurora bands
+		// Draw flowing aurora bands (using warm gray palette)
 		for (let band = 0; band < bandCount; band++) {
 			const baseY = height * 0.15 + band * 40;
-			const hue = 120 + band * 30; // Green to cyan spectrum
+			// Vary intensity per band for depth effect
+			const bandIntensity = 70 + band * 8;
 
 			ctx.beginPath();
 
@@ -1786,17 +2138,17 @@
 			ctx.lineTo(-50, 0);
 			ctx.closePath();
 
-			// Create vertical gradient for aurora effect
+			// Create vertical gradient for aurora effect (warm gray palette)
 			const gradient = ctx.createLinearGradient(0, 0, 0, baseY + 100);
-			gradient.addColorStop(0, `rgba(60, 80, 60, 0)`);
-			gradient.addColorStop(0.5, `rgba(60, 80, 60, ${opacity * 0.5})`);
-			gradient.addColorStop(1, `rgba(60, 80, 60, ${opacity})`);
+			gradient.addColorStop(0, `rgba(${bandIntensity}, ${bandIntensity}, ${bandIntensity}, 0)`);
+			gradient.addColorStop(0.5, `rgba(${bandIntensity}, ${bandIntensity}, ${bandIntensity}, ${opacity * 0.5})`);
+			gradient.addColorStop(1, `rgba(${bandIntensity}, ${bandIntensity}, ${bandIntensity}, ${opacity})`);
 
 			ctx.fillStyle = gradient;
 			ctx.fill();
 		}
 
-		// Add vertical ray effects
+		// Add vertical ray effects (warm gray palette)
 		const rayCount = 15;
 		ctx.globalAlpha = opacity * 0.3;
 		for (let r = 0; r < rayCount; r++) {
@@ -1804,9 +2156,9 @@
 			const rayHeight = height * 0.4 + Math.sin(time * speedMult + r * 0.7) * height * 0.1;
 
 			const rayGradient = ctx.createLinearGradient(x, 0, x, rayHeight);
-			rayGradient.addColorStop(0, `rgba(60, 70, 60, 0)`);
-			rayGradient.addColorStop(0.3, `rgba(60, 70, 60, ${opacity * 0.3})`);
-			rayGradient.addColorStop(1, `rgba(60, 70, 60, 0)`);
+			rayGradient.addColorStop(0, `rgba(65, 65, 65, 0)`);
+			rayGradient.addColorStop(0.3, `rgba(65, 65, 65, ${opacity * 0.3})`);
+			rayGradient.addColorStop(1, `rgba(65, 65, 65, 0)`);
 
 			ctx.fillStyle = rayGradient;
 			ctx.fillRect(x - 2, 0, 4, rayHeight);
@@ -1816,99 +2168,7 @@
 	}
 
 	// ============================================
-	// 17. MATRIX RAIN
-	// ============================================
-	// Matrix rain state
-	interface RainDrop {
-		x: number;
-		y: number;
-		speed: number;
-		chars: string[];
-		length: number;
-	}
-	let rainDrops: RainDrop[] = [];
-
-	function initRainDrops(seed: number): RainDrop[] {
-		const rand = createRandom(seed);
-		const result: RainDrop[] = [];
-		const chars = '01アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヲン';
-		const colCount = Math.ceil(width / 20);
-
-		for (let i = 0; i < colCount; i++) {
-			const dropChars: string[] = [];
-			const length = Math.floor(rand() * 15) + 5;
-			for (let j = 0; j < length; j++) {
-				dropChars.push(chars[Math.floor(rand() * chars.length)]);
-			}
-
-			result.push({
-				x: i * 20 + 10,
-				y: rand() * height - height,
-				speed: rand() * 3 + 2,
-				chars: dropChars,
-				length
-			});
-		}
-		return result;
-	}
-
-	function drawMatrixRain(ctx: CanvasRenderingContext2D, seed: number) {
-		const opacity = 0.1 * opacityMultiplier * patternConfig.opacity;
-		const speedMult = patternConfig.speed;
-		const mouseMult = patternConfig.mouseInfluence;
-		const charSize = 14;
-
-		// Initialize rain drops if needed
-		if (rainDrops.length === 0 || Math.abs(rainDrops[0]?.x - 10) > 5) {
-			rainDrops = initRainDrops(seed);
-		}
-
-		ctx.font = `${charSize}px monospace`;
-		ctx.textAlign = 'center';
-
-		// Update and draw drops
-		rainDrops.forEach((drop) => {
-			// Mouse influence - slow down near cursor
-			const dx = Math.abs(drop.x - mouseX * width);
-			const mouseSlowdown = dx < 100 ? (1 - (100 - dx) / 100 * 0.5 * mouseMult) : 1;
-
-			drop.y += drop.speed * speedMult * mouseSlowdown;
-
-			// Reset when off screen
-			if (drop.y > height + drop.length * charSize) {
-				drop.y = -drop.length * charSize;
-				// Randomize characters
-				const chars = '01アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヲン';
-				for (let i = 0; i < drop.chars.length; i++) {
-					if (Math.random() < 0.1) {
-						drop.chars[i] = chars[Math.floor(Math.random() * chars.length)];
-					}
-				}
-			}
-
-			// Draw characters with fade effect
-			drop.chars.forEach((char, i) => {
-				const y = drop.y + i * charSize;
-				if (y < 0 || y > height) return;
-
-				// Fade from bright (head) to dim (tail)
-				const fadeProgress = i / drop.chars.length;
-				const charOpacity = (1 - fadeProgress) * opacity;
-
-				// Head character is brightest
-				if (i === 0) {
-					ctx.fillStyle = `rgba(40, 40, 40, ${charOpacity * 2})`;
-				} else {
-					ctx.fillStyle = `rgba(60, 60, 60, ${charOpacity})`;
-				}
-
-				ctx.fillText(char, drop.x, y);
-			});
-		});
-	}
-
-	// ============================================
-	// 18. CIRCUIT BOARD
+	// 17. CIRCUIT BOARD
 	// ============================================
 	interface CircuitNode {
 		x: number;
@@ -1926,29 +2186,34 @@
 		const rows = Math.ceil(height / gridSize);
 		const types: CircuitNode['type'][] = ['chip', 'resistor', 'capacitor', 'junction'];
 
-		// Create nodes on a grid with some randomness
+		// First pass: Create all nodes on a grid with some randomness
 		for (let i = 0; i < cols; i++) {
 			for (let j = 0; j < rows; j++) {
 				if (rand() > 0.6) continue; // Skip some positions
 
-				const nodeIndex = result.length;
 				result.push({
 					x: i * gridSize + gridSize / 2 + (rand() - 0.5) * 20,
 					y: j * gridSize + gridSize / 2 + (rand() - 0.5) * 20,
 					connections: [],
 					type: types[Math.floor(rand() * types.length)]
 				});
-
-				// Connect to nearby existing nodes
-				result.forEach((other, idx) => {
-					if (idx === nodeIndex) return;
-					const dist = Math.sqrt((result[nodeIndex].x - other.x) ** 2 + (result[nodeIndex].y - other.y) ** 2);
-					if (dist < gridSize * 1.5 && rand() > 0.5) {
-						result[nodeIndex].connections.push(idx);
-					}
-				});
 			}
 		}
+
+		// Second pass: Add connections after all nodes are created
+		// This avoids modifying the array while building it
+		result.forEach((node, nodeIndex) => {
+			const connections: number[] = [];
+			result.forEach((other, idx) => {
+				if (idx === nodeIndex) return;
+				const dist = Math.sqrt((node.x - other.x) ** 2 + (node.y - other.y) ** 2);
+				if (dist < gridSize * 1.5 && rand() > 0.5) {
+					connections.push(idx);
+				}
+			});
+			node.connections = connections;
+		});
+
 		return result;
 	}
 
@@ -2145,53 +2410,492 @@
 		const opacity = 0.08 * opacityMultiplier * patternConfig.opacity;
 		const speedMult = patternConfig.speed;
 		const mouseMult = patternConfig.mouseInfluence;
-		const resolution = 6;
-		const scale = 0.008;
+		const scale = 0.004;
+		const contourLevels = 12;
 
-		// Draw noise field as contour-like visualization
-		const contourLevels = 8;
+		// Draw flowing contour lines that animate
+		ctx.lineWidth = 1;
+		ctx.lineCap = 'round';
 
-		for (let x = 0; x < width; x += resolution) {
-			for (let y = 0; y < height; y += resolution) {
-				// Animated noise
-				const nx = x * scale + time * 0.1 * speedMult;
-				const ny = y * scale + time * 0.05 * speedMult;
+		// Draw multiple layers of flowing streamlines
+		const streamCount = Math.floor(80 * patternConfig.density);
+		const rand = createRandom(seed);
 
-				// Mouse creates distortion
+		for (let s = 0; s < streamCount; s++) {
+			// Start point - distribute across canvas
+			let x = rand() * width;
+			let y = rand() * height;
+			const streamLength = 60 + rand() * 80;
+
+			ctx.beginPath();
+			ctx.moveTo(x, y);
+
+			// Follow the noise gradient
+			for (let i = 0; i < streamLength; i++) {
+				const nx = x * scale + time * 0.05 * speedMult;
+				const ny = y * scale + time * 0.03 * speedMult;
+
+				// Mouse creates attraction/repulsion
+				const dx = (x - mouseX * width);
+				const dy = (y - mouseY * height);
+				const mouseDist = Math.sqrt(dx * dx + dy * dy);
+				const mouseForce = Math.exp(-mouseDist / 150) * 2 * mouseMult;
+
+				// Get noise-based angle for flow direction
+				const noiseAngle = fractalNoise(nx, ny, seed, 4) * Math.PI * 2;
+
+				// Calculate flow direction
+				const flowX = Math.cos(noiseAngle) * 3 + (dx / (mouseDist + 1)) * mouseForce;
+				const flowY = Math.sin(noiseAngle) * 3 + (dy / (mouseDist + 1)) * mouseForce;
+
+				x += flowX;
+				y += flowY;
+
+				// Keep in bounds with wrap-around
+				if (x < 0) x += width;
+				if (x > width) x -= width;
+				if (y < 0) y += height;
+				if (y > height) y -= height;
+
+				ctx.lineTo(x, y);
+			}
+
+			// Gradient opacity along the stream
+			const streamOpacity = opacity * (0.5 + rand() * 0.5);
+			ctx.strokeStyle = `rgba(70, 70, 70, ${streamOpacity})`;
+			ctx.stroke();
+		}
+
+		// Draw animated contour bands
+		const bandStep = 8;
+		for (let x = 0; x < width; x += bandStep) {
+			for (let y = 0; y < height; y += bandStep) {
+				const nx = x * scale + time * 0.06 * speedMult;
+				const ny = y * scale + time * 0.04 * speedMult;
+
+				// Mouse distortion
 				const dx = (x - mouseX * width) / width;
 				const dy = (y - mouseY * height) / height;
 				const mouseDist = Math.sqrt(dx * dx + dy * dy);
-				const mouseDistort = Math.exp(-mouseDist * 3) * 0.3 * mouseMult;
+				const mouseDistort = Math.exp(-mouseDist * 2.5) * 0.4 * mouseMult;
 
-				const noiseValue = fractalNoise(nx + mouseDistort * dx, ny + mouseDistort * dy, seed);
+				const value = fractalNoise(nx + mouseDistort * dx * 2, ny + mouseDistort * dy * 2, seed, 5);
 
 				// Quantize to contour levels
-				const level = Math.floor((noiseValue + 1) / 2 * contourLevels);
+				const level = Math.floor((value + 1) / 2 * contourLevels);
 				const normalizedLevel = level / contourLevels;
 
-				// Draw with varying intensity
-				const gray = 50 + normalizedLevel * 30;
-				const alpha = opacity * (0.3 + normalizedLevel * 0.7);
+				// Only draw on contour boundaries for cleaner lines
+				const nextX = fractalNoise((x + bandStep) * scale + time * 0.06 * speedMult, ny, seed, 5);
+				const nextY = fractalNoise(nx, (y + bandStep) * scale + time * 0.04 * speedMult, seed, 5);
+				const nextXLevel = Math.floor((nextX + 1) / 2 * contourLevels);
+				const nextYLevel = Math.floor((nextY + 1) / 2 * contourLevels);
 
-				ctx.fillStyle = `rgba(${gray}, ${gray}, ${gray}, ${alpha})`;
-				ctx.fillRect(x, y, resolution, resolution);
-
-				// Draw contour lines (edges between levels)
-				if (x > 0 && y > 0) {
-					const prevXNoise = fractalNoise((x - resolution) * scale + time * 0.1 * speedMult, ny, seed);
-					const prevYNoise = fractalNoise(nx, (y - resolution) * scale + time * 0.05 * speedMult, seed);
-
-					const prevXLevel = Math.floor((prevXNoise + 1) / 2 * contourLevels);
-					const prevYLevel = Math.floor((prevYNoise + 1) / 2 * contourLevels);
-
-					// If there's a level change, draw a contour line
-					if (prevXLevel !== level || prevYLevel !== level) {
-						ctx.fillStyle = `rgba(40, 40, 40, ${opacity * 1.5})`;
-						ctx.fillRect(x, y, resolution, resolution);
-					}
+				if (level !== nextXLevel || level !== nextYLevel) {
+					// Draw contour point with pulsing effect
+					const pulse = 0.5 + Math.sin(time * 2 + x * 0.02 + y * 0.02) * 0.3;
+					const gray = 40 + normalizedLevel * 35;
+					ctx.fillStyle = `rgba(${gray}, ${gray}, ${gray}, ${opacity * 2 * pulse})`;
+					ctx.fillRect(x, y, 2, 2);
 				}
 			}
 		}
+
+		// Add floating particles that follow the flow
+		const particleCount = Math.floor(40 * patternConfig.density);
+		for (let p = 0; p < particleCount; p++) {
+			// Particles move in a looping pattern seeded by index
+			const baseX = ((seed * 1000 + p * 137) % width);
+			const baseY = ((seed * 2000 + p * 251) % height);
+
+			// Animate position along flow
+			const flowTime = time * 0.3 * speedMult + p * 0.5;
+			const flowNoise = fractalNoise(p * 0.1, flowTime * 0.1, seed, 3);
+			const flowAngle = flowNoise * Math.PI * 2;
+
+			const px = (baseX + Math.cos(flowAngle + flowTime) * 100 + width) % width;
+			const py = (baseY + Math.sin(flowAngle * 0.7 + flowTime * 0.8) * 80 + height) % height;
+
+			// Mouse attraction
+			const dx = mouseX * width - px;
+			const dy = mouseY * height - py;
+			const dist = Math.sqrt(dx * dx + dy * dy);
+			const attraction = Math.exp(-dist / 200) * mouseMult;
+
+			const finalX = px + dx * attraction * 0.1;
+			const finalY = py + dy * attraction * 0.1;
+
+			// Particle size varies with noise
+			const size = 2 + flowNoise * 3;
+			const particleOpacity = opacity * (1.2 + flowNoise * 0.5);
+
+			ctx.beginPath();
+			ctx.arc(finalX, finalY, size, 0, Math.PI * 2);
+			ctx.fillStyle = `rgba(60, 60, 60, ${particleOpacity})`;
+			ctx.fill();
+		}
+	}
+
+	// ============================================
+	// 21. METABALLS (Organic Blobs)
+	// ============================================
+	function drawMetaballs(ctx: CanvasRenderingContext2D, balls: Metaball[], seed: number) {
+		const opacity = 0.08 * opacityMultiplier * patternConfig.opacity;
+		const speedMult = patternConfig.speed;
+		const mouseMult = patternConfig.mouseInfluence;
+		const step = 5;
+		const threshold = 1.0;
+
+		// Update metaball positions
+		balls.forEach((ball) => {
+			// Mouse attraction
+			const dx = mouseX * width - ball.x;
+			const dy = mouseY * height - ball.y;
+			const dist = Math.sqrt(dx * dx + dy * dy);
+			if (dist > 50 && dist < 300) {
+				ball.vx += (dx / dist) * 0.05 * mouseMult;
+				ball.vy += (dy / dist) * 0.05 * mouseMult;
+			}
+
+			ball.x += ball.vx * speedMult;
+			ball.y += ball.vy * speedMult;
+			ball.vx *= 0.99;
+			ball.vy *= 0.99;
+
+			// Add gentle orbital motion
+			ball.vx += Math.sin(time * 0.3 * speedMult + ball.radius * 0.1) * 0.1;
+			ball.vy += Math.cos(time * 0.25 * speedMult + ball.radius * 0.1) * 0.1;
+
+			// Wrap around
+			if (ball.x < -ball.radius) ball.x = width + ball.radius;
+			if (ball.x > width + ball.radius) ball.x = -ball.radius;
+			if (ball.y < -ball.radius) ball.y = height + ball.radius;
+			if (ball.y > height + ball.radius) ball.y = -ball.radius;
+		});
+
+		// Draw metaballs using implicit surface rendering
+		for (let x = 0; x < width; x += step) {
+			for (let y = 0; y < height; y += step) {
+				let sum = 0;
+				balls.forEach((ball) => {
+					const dx = x - ball.x;
+					const dy = y - ball.y;
+					const distSq = dx * dx + dy * dy + 1;
+					sum += (ball.radius * ball.radius) / distSq;
+				});
+
+				if (sum > threshold) {
+					// Inside merged blob
+					const intensity = Math.min(1, (sum - threshold) * 0.3);
+					const gray = 55 + intensity * 30;
+					ctx.fillStyle = `rgba(${gray}, ${gray}, ${gray}, ${intensity * opacity})`;
+					ctx.fillRect(x, y, step, step);
+				} else if (sum > threshold * 0.7) {
+					// Edge of blob - subtle glow
+					const edgeIntensity = (sum - threshold * 0.7) / (threshold * 0.3);
+					ctx.fillStyle = `rgba(70, 70, 70, ${edgeIntensity * opacity * 0.3})`;
+					ctx.fillRect(x, y, step, step);
+				}
+			}
+		}
+	}
+
+	// ============================================
+	// 22. LIGHTNING (Electric Bolts)
+	// ============================================
+	function drawLightning(ctx: CanvasRenderingContext2D, bolts: LightningBolt[], seed: number) {
+		const opacity = 0.1 * opacityMultiplier * patternConfig.opacity;
+		const speedMult = patternConfig.speed;
+		const mouseMult = patternConfig.mouseInfluence;
+		const rand = createRandom(seed + Math.floor(time * 10));
+
+		// Update and regenerate bolts
+		bolts.forEach((bolt, i) => {
+			bolt.age += 0.016 * speedMult;
+			if (bolt.age > bolt.lifetime) {
+				// Regenerate bolt
+				const newRand = createRandom(seed + i + Math.floor(time * 100));
+				bolt.startX = newRand() * width;
+				bolt.startY = newRand() * height * 0.2;
+				bolt.endX = mouseX * width + (newRand() - 0.5) * 300 * mouseMult;
+				bolt.endY = mouseY * height + (newRand() - 0.5) * 200 * mouseMult;
+				bolt.intensity = newRand() * 0.5 + 0.5;
+				bolt.lifetime = newRand() * 0.4 + 0.2;
+				bolt.age = 0;
+			}
+		});
+
+		// Draw each bolt with branching
+		bolts.forEach((bolt) => {
+			const fadeAlpha = Math.max(0, 1 - bolt.age / bolt.lifetime);
+			if (fadeAlpha <= 0) return;
+
+			const drawBoltSegment = (sx: number, sy: number, ex: number, ey: number, depth: number, intensity: number) => {
+				if (depth > 4) return;
+
+				const segments = 8 - depth;
+				ctx.beginPath();
+				ctx.moveTo(sx, sy);
+
+				let x = sx, y = sy;
+				for (let i = 1; i <= segments; i++) {
+					const progress = i / segments;
+					const targetX = sx + (ex - sx) * progress;
+					const targetY = sy + (ey - sy) * progress;
+
+					// Add jitter (decreases with depth)
+					const jitterAmount = (30 - depth * 8) * (1 - progress * 0.5);
+					x = targetX + (rand() - 0.5) * jitterAmount;
+					y = targetY + (rand() - 0.5) * jitterAmount;
+					ctx.lineTo(x, y);
+
+					// Branch occasionally
+					if (depth < 2 && rand() < 0.2) {
+						const branchLen = 50 - depth * 15;
+						const branchAngle = Math.atan2(ey - sy, ex - sx) + (rand() - 0.5) * 1.5;
+						drawBoltSegment(
+							x, y,
+							x + Math.cos(branchAngle) * branchLen,
+							y + Math.sin(branchAngle) * branchLen,
+							depth + 1,
+							intensity * 0.6
+						);
+					}
+				}
+
+				// Draw glow (wider, more transparent)
+				ctx.strokeStyle = `rgba(100, 100, 100, ${fadeAlpha * opacity * intensity * 0.3})`;
+				ctx.lineWidth = 6 - depth;
+				ctx.stroke();
+
+				// Draw main bolt
+				ctx.strokeStyle = `rgba(70, 70, 70, ${fadeAlpha * opacity * intensity})`;
+				ctx.lineWidth = 2 - depth * 0.3;
+				ctx.stroke();
+			};
+
+			drawBoltSegment(bolt.startX, bolt.startY, bolt.endX, bolt.endY, 0, bolt.intensity);
+		});
+	}
+
+	// ============================================
+	// 23. TERRAIN (3D Height Map)
+	// ============================================
+	function drawTerrain(ctx: CanvasRenderingContext2D, seed: number) {
+		const opacity = 0.07 * opacityMultiplier * patternConfig.opacity;
+		const speedMult = patternConfig.speed;
+		const mouseMult = patternConfig.mouseInfluence;
+		const gridSize = 25;
+		const cols = Math.ceil(width / gridSize) + 2;
+		const rows = Math.ceil(height / gridSize) + 2;
+		const heightScale = 40;
+
+		// Draw from back to front for proper depth
+		for (let j = 0; j < rows; j++) {
+			ctx.beginPath();
+			let firstPoint = true;
+
+			for (let i = 0; i < cols; i++) {
+				const x = i * gridSize - gridSize;
+				const y = j * gridSize - gridSize;
+
+				// Calculate elevation using noise
+				const nx = x * 0.008 + time * 0.05 * speedMult;
+				const ny = y * 0.008;
+
+				// Mouse creates a "push" in the terrain
+				const dx = (x - mouseX * width) / width;
+				const dy = (y - mouseY * height) / height;
+				const mouseDist = Math.sqrt(dx * dx + dy * dy);
+				const mouseInfluence = Math.exp(-mouseDist * 3) * 30 * mouseMult;
+
+				const elevation = fractalNoise(nx, ny, seed, 4) * heightScale + mouseInfluence;
+
+				// Isometric-ish projection
+				const screenX = x;
+				const screenY = y - elevation;
+
+				if (firstPoint) {
+					ctx.moveTo(screenX, screenY);
+					firstPoint = false;
+				} else {
+					ctx.lineTo(screenX, screenY);
+				}
+			}
+
+			// Shading based on row (depth)
+			const rowShade = 50 + (j / rows) * 30;
+			ctx.strokeStyle = `rgba(${rowShade}, ${rowShade}, ${rowShade}, ${opacity})`;
+			ctx.lineWidth = 1;
+			ctx.stroke();
+		}
+
+		// Draw vertical grid lines
+		for (let i = 0; i < cols; i++) {
+			ctx.beginPath();
+			let firstPoint = true;
+
+			for (let j = 0; j < rows; j++) {
+				const x = i * gridSize - gridSize;
+				const y = j * gridSize - gridSize;
+
+				const nx = x * 0.008 + time * 0.05 * speedMult;
+				const ny = y * 0.008;
+
+				const dx = (x - mouseX * width) / width;
+				const dy = (y - mouseY * height) / height;
+				const mouseDist = Math.sqrt(dx * dx + dy * dy);
+				const mouseInfluence = Math.exp(-mouseDist * 3) * 30 * mouseMult;
+
+				const elevation = fractalNoise(nx, ny, seed, 4) * heightScale + mouseInfluence;
+				const screenY = y - elevation;
+
+				if (firstPoint) {
+					ctx.moveTo(x, screenY);
+					firstPoint = false;
+				} else {
+					ctx.lineTo(x, screenY);
+				}
+			}
+
+			const colShade = 45 + (i / cols) * 25;
+			ctx.strokeStyle = `rgba(${colShade}, ${colShade}, ${colShade}, ${opacity * 0.7})`;
+			ctx.lineWidth = 0.5;
+			ctx.stroke();
+		}
+	}
+
+	// ============================================
+	// 24. KALEIDOSCOPE (Mirror Symmetry)
+	// ============================================
+	function drawKaleidoscope(ctx: CanvasRenderingContext2D, kParticles: KaleidoParticle[], seed: number) {
+		const opacity = 0.06 * opacityMultiplier * patternConfig.opacity;
+		const speedMult = patternConfig.speed;
+		const mouseMult = patternConfig.mouseInfluence;
+		const segments = 8; // 8-fold symmetry
+		const centerX = width / 2;
+		const centerY = height / 2;
+
+		// Update particles
+		kParticles.forEach((p, i) => {
+			p.angle += p.speed * speedMult;
+			// Subtle radial pulsing
+			const baseDist = Math.min(width, height) * 0.4;
+			p.distance = (i / kParticles.length) * baseDist +
+				Math.sin(time * 0.5 * speedMult + i * 0.2) * 20;
+		});
+
+		ctx.save();
+		ctx.translate(centerX, centerY);
+
+		// Mouse offset for the whole kaleidoscope
+		const mouseOffsetX = (mouseX - 0.5) * 50 * mouseMult;
+		const mouseOffsetY = (mouseY - 0.5) * 50 * mouseMult;
+
+		for (let seg = 0; seg < segments; seg++) {
+			ctx.save();
+			ctx.rotate((seg * Math.PI * 2) / segments);
+			if (seg % 2 === 1) ctx.scale(1, -1); // Mirror alternate segments
+
+			// Draw particles in this segment
+			kParticles.forEach((p, i) => {
+				// Only draw if angle is in first segment slice
+				const localAngle = ((p.angle % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
+				if (localAngle < Math.PI / (segments / 2)) {
+					const px = Math.cos(localAngle) * p.distance + mouseOffsetX / segments;
+					const py = Math.sin(localAngle) * p.distance + mouseOffsetY / segments;
+
+					ctx.beginPath();
+					ctx.arc(px, py, p.size, 0, Math.PI * 2);
+					const shade = 55 + (i % 5) * 5;
+					ctx.fillStyle = `rgba(${shade}, ${shade}, ${shade}, ${opacity})`;
+					ctx.fill();
+				}
+			});
+
+			// Draw connecting lines between nearby particles
+			ctx.strokeStyle = `rgba(60, 60, 60, ${opacity * 0.3})`;
+			ctx.lineWidth = 0.5;
+			for (let i = 0; i < kParticles.length - 1; i++) {
+				const p1 = kParticles[i];
+				const p2 = kParticles[i + 1];
+				const angle1 = ((p1.angle % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
+				const angle2 = ((p2.angle % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
+
+				if (angle1 < Math.PI / (segments / 2) && angle2 < Math.PI / (segments / 2)) {
+					const x1 = Math.cos(angle1) * p1.distance;
+					const y1 = Math.sin(angle1) * p1.distance;
+					const x2 = Math.cos(angle2) * p2.distance;
+					const y2 = Math.sin(angle2) * p2.distance;
+
+					const dist = Math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2);
+					if (dist < 80) {
+						ctx.beginPath();
+						ctx.moveTo(x1, y1);
+						ctx.lineTo(x2, y2);
+						ctx.stroke();
+					}
+				}
+			}
+
+			ctx.restore();
+		}
+
+		ctx.restore();
+	}
+
+	// ============================================
+	// 25. MATRIX RAIN (Falling Characters)
+	// ============================================
+	function drawMatrixRain(ctx: CanvasRenderingContext2D, columns: RainColumn[], seed: number) {
+		const opacity = 0.08 * opacityMultiplier * patternConfig.opacity;
+		const speedMult = patternConfig.speed;
+		const mouseMult = patternConfig.mouseInfluence;
+		const charSize = 14;
+
+		ctx.font = `${charSize}px monospace`;
+
+		// Update and draw columns
+		columns.forEach((col, colIdx) => {
+			// Update position
+			col.y += col.speed * speedMult;
+			if (col.y > height + col.length * charSize) {
+				col.y = -col.length * charSize;
+				col.speed = 2 + (createRandom(seed + colIdx + Math.floor(time))() * 4);
+			}
+
+			// Mouse repulsion - columns near mouse slow down
+			const colCenterY = col.y - (col.length * charSize) / 2;
+			const dx = col.x - mouseX * width;
+			const dy = colCenterY - mouseY * height;
+			const dist = Math.sqrt(dx * dx + dy * dy);
+			const mouseEffect = Math.max(0, 1 - dist / (200 * mouseMult)) * 0.5;
+			const effectiveSpeed = col.speed * (1 - mouseEffect);
+			col.y += (effectiveSpeed - col.speed) * speedMult;
+
+			// Draw characters with fade trail
+			for (let i = 0; i < col.length; i++) {
+				const charY = col.y - i * charSize;
+				if (charY < -charSize || charY > height + charSize) continue;
+
+				const fadeAlpha = 1 - (i / col.length);
+				const char = col.chars[i % col.chars.length];
+
+				// Occasionally change character (glitch effect)
+				if (Math.random() < 0.02) {
+					const chars = '01010101~-=|_+*><{}[]()#@$%&!?/\\^';
+					col.chars[i % col.chars.length] = chars[Math.floor(Math.random() * chars.length)];
+				}
+
+				// Lead character is brighter
+				if (i === 0) {
+					ctx.fillStyle = `rgba(100, 100, 100, ${opacity * fadeAlpha * 1.5})`;
+				} else {
+					ctx.fillStyle = `rgba(60, 60, 60, ${opacity * fadeAlpha * 0.8})`;
+				}
+				ctx.fillText(char, col.x, charY);
+			}
+		});
 	}
 
 	// Draw a specific style on a context
@@ -2245,9 +2949,6 @@
 			case 'aurora':
 				drawAuroraBorealis(ctx, seed);
 				break;
-			case 'rain':
-				drawMatrixRain(ctx, seed);
-				break;
 			case 'circuit':
 				drawCircuitBoard(ctx, seed);
 				break;
@@ -2256,6 +2957,21 @@
 				break;
 			case 'noise':
 				drawPerlinNoise(ctx, seed);
+				break;
+			case 'metaballs':
+				drawMetaballs(ctx, metaballs, seed);
+				break;
+			case 'lightning':
+				drawLightning(ctx, lightningBolts, seed);
+				break;
+			case 'terrain':
+				drawTerrain(ctx, seed);
+				break;
+			case 'kaleidoscope':
+				drawKaleidoscope(ctx, kaleidoParticles, seed);
+				break;
+			case 'matrix':
+				drawMatrixRain(ctx, rainColumns, seed);
 				break;
 		}
 	}
@@ -2297,37 +3013,40 @@
 
 		for (const exp of explosions) {
 			const age = (now - exp.startTime) / 1000;
-			const progress = age / 1.5; // 0 to 1 over 1.5 seconds
+			// Clamp progress to valid range (handles timestamp inconsistencies)
+			const progress = Math.max(0, Math.min(1, age / 1.5));
 
 			if (progress >= 1) continue;
+			// Skip if timestamp is invalid (negative age means future timestamp)
+			if (age < 0) continue;
 
-			const radius = exp.size + progress * 200;
-			const alpha = 1 - progress;
+			const radius = Math.max(0, exp.size + progress * 200);
+			const alpha = Math.max(0, 1 - progress);
 
-			// Multiple rings expanding
+			// Multiple rings expanding (ensure positive radius)
 			for (let ring = 0; ring < 3; ring++) {
-				const ringRadius = radius * (0.5 + ring * 0.3);
-				const ringAlpha = alpha * (1 - ring * 0.3);
+				const ringRadius = Math.max(0, radius * (0.5 + ring * 0.3));
+				const ringAlpha = Math.max(0, alpha * (1 - ring * 0.3));
 
 				ctx.beginPath();
 				ctx.arc(exp.x, exp.y, ringRadius, 0, Math.PI * 2);
 				ctx.strokeStyle = `rgba(255, 255, 255, ${ringAlpha * 0.5})`;
-				ctx.lineWidth = 3 - ring;
+				ctx.lineWidth = Math.max(1, 3 - ring);
 				ctx.stroke();
 			}
 
-			// Particle burst
+			// Particle burst (ensure positive radius)
 			const particleCount = 12;
 			for (let i = 0; i < particleCount; i++) {
 				const angle = (i / particleCount) * Math.PI * 2;
-				const dist = radius * (0.8 + Math.sin(angle * 3 + time * 5) * 0.2);
+				const dist = Math.max(0, radius * (0.8 + Math.sin(angle * 3 + time * 5) * 0.2));
 				const px = exp.x + Math.cos(angle) * dist;
 				const py = exp.y + Math.sin(angle) * dist;
-				const particleSize = (1 - progress) * 4;
+				const particleSize = Math.max(0, (1 - progress) * 4);
 
 				ctx.beginPath();
 				ctx.arc(px, py, particleSize, 0, Math.PI * 2);
-				ctx.fillStyle = `rgba(255, 255, 255, ${alpha * 0.8})`;
+				ctx.fillStyle = `rgba(255, 255, 255, ${Math.max(0, alpha) * 0.8})`;
 				ctx.fill();
 			}
 		}
@@ -2344,10 +3063,20 @@
 	}
 
 	// ============================================
+	// FRAME-LEVEL CACHE (computed once per frame)
+	// ============================================
+	let frameCacheMousePosX = 0;
+	let frameCacheMousePosY = 0;
+
+	// ============================================
 	// MAIN DRAW FUNCTION
 	// ============================================
 	function draw() {
 		if (!ctxCurrent || !browser) return;
+
+		// Cache mouse position for this frame (avoids repeated multiplications)
+		frameCacheMousePosX = mouseX * width;
+		frameCacheMousePosY = mouseY * height;
 
 		// Update transition progress
 		if (isTransitioning) {
@@ -2385,13 +3114,21 @@
 	// Performance: track visibility
 	let isVisible = $state(true);
 	let prefersReducedMotion = $state(false);
+	// Track last timestamp for proper deltaTime calculation
+	let lastTimestamp = 0;
 
-	function animate() {
+	function animate(timestamp: number = 0) {
 		if (!isVisible || prefersReducedMotion) {
+			// Reset timestamp when paused to avoid large delta on resume
+			lastTimestamp = 0;
 			animationFrame = requestAnimationFrame(animate);
 			return;
 		}
-		time += 0.016;
+		// Calculate actual deltaTime instead of assuming 60fps
+		const deltaTime = lastTimestamp ? (timestamp - lastTimestamp) / 1000 : 0.016;
+		lastTimestamp = timestamp;
+		// Cap deltaTime to prevent huge jumps when tab is inactive
+		time += Math.min(deltaTime, 0.1);
 
 		// Update interactive systems
 		updateExplosions();
@@ -2411,8 +3148,17 @@
 		prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 		ctxCurrent = canvasCurrent.getContext('2d');
+		// Null check - getContext can return null if canvas is unsupported or context unavailable
+		if (!ctxCurrent) {
+			console.warn('Failed to get 2D context for current canvas');
+			return;
+		}
 		if (canvasPrevious) {
 			ctxPrevious = canvasPrevious.getContext('2d');
+			// Previous canvas context is optional, so just log if it fails
+			if (!ctxPrevious) {
+				console.warn('Failed to get 2D context for previous canvas');
+			}
 		}
 		resizeCanvas();
 
@@ -2436,6 +3182,11 @@
 
 	onDestroy(() => {
 		if (!browser) return;
+		// Clean up store subscriptions to prevent memory leaks
+		if (unsubscribeChapter) unsubscribeChapter();
+		if (unsubscribePattern) unsubscribePattern();
+		if (unsubscribeConfig) unsubscribeConfig();
+		// Clean up animation frame
 		if (animationFrame !== undefined) {
 			cancelAnimationFrame(animationFrame);
 		}
@@ -2446,20 +3197,30 @@
 </script>
 
 {#if browser}
-	<!-- Previous canvas (for fade-out during transitions) -->
-	<canvas
-		bind:this={canvasPrevious}
-		class="immersive-bg previous"
-		class:transitioning={isTransitioning}
-		style:opacity={isTransitioning ? 1 - transitionProgress : 0}
-	></canvas>
-	<!-- Current canvas (main) -->
-	<canvas
-		bind:this={canvasCurrent}
-		class="immersive-bg current"
-		class:transitioning={isTransitioning}
-		style:opacity={isTransitioning ? transitionProgress : 1}
-	></canvas>
+	{#if isWasmActive}
+		<!-- Wasm Physics Engine (Rust-powered) -->
+		<WasmParticles
+			mouseX={mouseX}
+			mouseY={mouseY}
+			config={patternConfig}
+			opacityMultiplier={opacityMultiplier}
+		/>
+	{:else}
+		<!-- Previous canvas (for fade-out during transitions) -->
+		<canvas
+			bind:this={canvasPrevious}
+			class="immersive-bg previous"
+			class:transitioning={isTransitioning}
+			style:opacity={isTransitioning ? 1 - transitionProgress : 0}
+		></canvas>
+		<!-- Current canvas (main) -->
+		<canvas
+			bind:this={canvasCurrent}
+			class="immersive-bg current"
+			class:transitioning={isTransitioning}
+			style:opacity={isTransitioning ? transitionProgress : 1}
+		></canvas>
+	{/if}
 
 	<!-- Opacity slider control -->
 	<div class="opacity-control" class:open={showOpacitySlider}>

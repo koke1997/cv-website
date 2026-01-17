@@ -2,16 +2,19 @@
 	import { browser } from '$app/environment';
 	import { selectedPattern, type ArtPatternId } from '$lib/stores/creative';
 
-	// All 20 patterns for cycling
+	// All 20 patterns for cycling (wasm first, then Canvas2D patterns)
 	const patterns: ArtPatternId[] = [
-		'particles', 'flow', 'gradient', 'constellation', 'ripple', 'grid',
+		'wasm', 'particles', 'flow', 'gradient', 'constellation', 'ripple', 'grid',
 		'voronoi', 'waves', 'hexagon', 'orbits', 'bokeh', 'curves',
-		'magnetic', 'spiral', 'lattice', 'aurora', 'rain', 'circuit', 'plasma', 'noise'
+		'magnetic', 'spiral', 'lattice', 'aurora', 'circuit', 'plasma', 'noise'
 	];
 
 	let currentIndex = $state(0);
 	let isMouseDown = $state(false);
 	let mouseDownTime = $state(0);
+
+	// Check if current pattern is wasm (it has its own mouse handling)
+	let isWasmPattern = $derived(patterns[currentIndex] === 'wasm');
 	let gravityWellSize = $state(0);
 	let gravityWellPos = $state({ x: 0, y: 0 });
 	let showHint = $state(true);
@@ -39,8 +42,9 @@
 		cyclePattern(1);
 	}
 
-	// Mouse down starts gravity well
+	// Mouse down starts gravity well (skip for wasm - it has its own handling)
 	function handleMouseDown(e: MouseEvent) {
+		if (isWasmPattern) return;
 		isMouseDown = true;
 		mouseDownTime = Date.now();
 		gravityWellPos = { x: e.clientX, y: e.clientY };
@@ -50,6 +54,7 @@
 
 	// Mouse up releases gravity well
 	function handleMouseUp() {
+		if (isWasmPattern) return;
 		if (isMouseDown) {
 			const holdTime = Date.now() - mouseDownTime;
 			if (holdTime > 200) {
@@ -66,6 +71,7 @@
 
 	// Track mouse position for gravity well
 	function handleMouseMove(e: MouseEvent) {
+		if (isWasmPattern) return;
 		if (isMouseDown) {
 			gravityWellPos = { x: e.clientX, y: e.clientY };
 		}
@@ -129,8 +135,8 @@
 	onmousemove={handleMouseMove}
 	onmouseleave={handleMouseUp}
 >
-	<!-- Gravity well indicator -->
-	{#if isMouseDown && gravityWellSize > 10}
+	<!-- Gravity well indicator (only for Canvas2D patterns, not wasm) -->
+	{#if !isWasmPattern && isMouseDown && gravityWellSize > 10}
 		<div
 			class="gravity-well"
 			style="
@@ -171,42 +177,19 @@
 		pointer-events: none;
 		transform: translate(-50%, -50%);
 		z-index: 10;
-		/* Comet shape: elongated with tail */
-		border-radius: 50% 50% 50% 80% / 50% 50% 80% 50%;
+		/* Simple elegant circle */
+		border-radius: 50%;
 		background: radial-gradient(
-			ellipse 60% 80% at 40% 40%,
-			rgba(120, 120, 120, 0.4) 0%,
-			rgba(80, 80, 80, 0.25) 30%,
-			rgba(40, 40, 40, 0.1) 60%,
+			circle at center,
+			rgba(120, 115, 105, 0.15) 0%,
+			rgba(100, 95, 85, 0.08) 50%,
 			transparent 100%
 		);
-		border: 1px solid rgba(100, 100, 100, 0.3);
-		box-shadow:
-			0 0 20px rgba(80, 80, 80, 0.2),
-			inset 0 0 10px rgba(150, 150, 150, 0.1);
-		animation: cometPulse 0.6s ease-out infinite;
+		border: 1px solid rgba(100, 95, 85, 0.2);
+		animation: wellPulse 1s ease-out infinite;
 	}
 
-	/* Comet tail pseudo-element */
-	.gravity-well::after {
-		content: '';
-		position: absolute;
-		top: 60%;
-		left: 60%;
-		width: 150%;
-		height: 40%;
-		background: linear-gradient(
-			135deg,
-			rgba(100, 100, 100, 0.2) 0%,
-			rgba(60, 60, 60, 0.1) 40%,
-			transparent 100%
-		);
-		border-radius: 0 100% 100% 0;
-		transform: rotate(45deg);
-		transform-origin: left center;
-	}
-
-	@keyframes cometPulse {
+	@keyframes wellPulse {
 		0%, 100% { opacity: 0.9; transform: translate(-50%, -50%) scale(1); }
 		50% { opacity: 0.6; transform: translate(-50%, -50%) scale(0.98); }
 	}

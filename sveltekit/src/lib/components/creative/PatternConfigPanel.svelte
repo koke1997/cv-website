@@ -65,6 +65,12 @@
 			<path d="M14 8A6 6 0 1 1 2.34 5.74" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
 			<path d="M2 2v4h4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
 		</symbol>
+		<!-- Wasm - Rust/WebAssembly gear with cog -->
+		<symbol id="icon-wasm" viewBox="0 0 16 16">
+			<path d="M8 1l1.5 2.5L12 3l-.5 2.5L14 7l-2.5 1.5L12 11l-2.5-.5L8 13l-1.5-2.5L4 11l.5-2.5L2 7l2.5-1.5L4 3l2.5.5L8 1z" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/>
+			<circle cx="8" cy="7" r="2" fill="none" stroke="currentColor" stroke-width="1"/>
+			<text x="8" y="14.5" font-size="4" font-weight="bold" fill="currentColor" text-anchor="middle">W</text>
+		</symbol>
 		<!-- Particles - scattered dots -->
 		<symbol id="icon-particles" viewBox="0 0 16 16">
 			<circle cx="4" cy="4" r="1.5" fill="currentColor"/>
@@ -173,11 +179,6 @@
 			<path d="M1 8c5 2 9-2 14 1" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" opacity="0.7"/>
 			<path d="M1 12c3 1 11-1 14 0" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" opacity="0.5"/>
 		</symbol>
-		<!-- Rain - vertical lines -->
-		<symbol id="icon-rain" viewBox="0 0 16 16">
-			<path d="M3 1v6M7 3v8M11 1v10M15 4v6" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
-			<path d="M5 5v5M9 2v7M13 6v8" fill="none" stroke="currentColor" stroke-width="0.8" stroke-linecap="round" opacity="0.6"/>
-		</symbol>
 		<!-- Circuit - electronic paths -->
 		<symbol id="icon-circuit" viewBox="0 0 16 16">
 			<path d="M2 8h4l2-4h4l2 4" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -202,6 +203,41 @@
 			<rect x="2" y="10" width="2" height="2" fill="currentColor" opacity="0.5"/>
 			<rect x="6" y="10" width="2" height="2" fill="currentColor" opacity="0.9"/>
 			<rect x="10" y="10" width="2" height="2" fill="currentColor" opacity="0.3"/>
+		</symbol>
+		<!-- Metaballs - organic blobs merging -->
+		<symbol id="icon-metaballs" viewBox="0 0 16 16">
+			<circle cx="5" cy="7" r="3.5" fill="none" stroke="currentColor" stroke-width="1.2"/>
+			<circle cx="11" cy="7" r="3.5" fill="none" stroke="currentColor" stroke-width="1.2"/>
+			<ellipse cx="8" cy="7" rx="1.5" ry="3" fill="none" stroke="currentColor" stroke-width="1" opacity="0.5"/>
+		</symbol>
+		<!-- Lightning - electric bolt -->
+		<symbol id="icon-lightning" viewBox="0 0 16 16">
+			<path d="M9 1L4 9h4l-1 6 5-8H8l1-6z" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/>
+			<path d="M11 3l2-1M12 7l2 1M2 5l2 1" fill="none" stroke="currentColor" stroke-width="0.8" opacity="0.5"/>
+		</symbol>
+		<!-- Terrain - 3D height map lines -->
+		<symbol id="icon-terrain" viewBox="0 0 16 16">
+			<path d="M1 12l3-4 3 2 4-5 4 3" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+			<path d="M1 10l4-3 3 1 4-4 3 2" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" opacity="0.6"/>
+			<path d="M1 8l5-2 3 1 4-3 2 1" fill="none" stroke="currentColor" stroke-width="0.8" stroke-linecap="round" opacity="0.3"/>
+		</symbol>
+		<!-- Kaleidoscope - symmetric pattern -->
+		<symbol id="icon-kaleidoscope" viewBox="0 0 16 16">
+			<circle cx="8" cy="8" r="6" fill="none" stroke="currentColor" stroke-width="1"/>
+			<path d="M8 2v12M2 8h12M3.5 3.5l9 9M12.5 3.5l-9 9" fill="none" stroke="currentColor" stroke-width="0.8" opacity="0.5"/>
+			<circle cx="8" cy="8" r="2" fill="currentColor" opacity="0.3"/>
+		</symbol>
+		<!-- Matrix - falling characters -->
+		<symbol id="icon-matrix" viewBox="0 0 16 16">
+			<text x="3" y="5" font-size="4" fill="currentColor" opacity="0.4">0</text>
+			<text x="7" y="7" font-size="4" fill="currentColor" opacity="0.7">1</text>
+			<text x="11" y="4" font-size="4" fill="currentColor" opacity="0.5">0</text>
+			<text x="3" y="10" font-size="4" fill="currentColor" opacity="0.6">1</text>
+			<text x="7" y="12" font-size="4" fill="currentColor" opacity="0.9">0</text>
+			<text x="11" y="9" font-size="4" fill="currentColor" opacity="0.4">1</text>
+			<text x="3" y="15" font-size="4" fill="currentColor" opacity="0.3">0</text>
+			<text x="7" y="3" font-size="4" fill="currentColor">1</text>
+			<text x="11" y="14" font-size="4" fill="currentColor" opacity="0.5">1</text>
 		</symbol>
 	</defs>
 </svg>
