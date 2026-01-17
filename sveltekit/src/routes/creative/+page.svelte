@@ -64,12 +64,10 @@
 		gravityWellSize = 0;
 	}
 
-	// Track mouse for gravity well growth
+	// Track mouse position for gravity well
 	function handleMouseMove(e: MouseEvent) {
 		if (isMouseDown) {
 			gravityWellPos = { x: e.clientX, y: e.clientY };
-			const holdTime = Date.now() - mouseDownTime;
-			gravityWellSize = Math.min(holdTime / 10, 150); // Max 150px radius
 		}
 	}
 
@@ -97,6 +95,20 @@
 			const timer = setTimeout(() => { showHint = false; }, 5000);
 			return () => clearTimeout(timer);
 		}
+	});
+
+	// Continuously update gravity well size while mouse is held down
+	$effect(() => {
+		if (!browser || !isMouseDown) return;
+
+		const updateGravityWell = () => {
+			if (!isMouseDown) return;
+			const holdTime = Date.now() - mouseDownTime;
+			gravityWellSize = Math.min(holdTime / 10, 150);
+		};
+
+		const interval = setInterval(updateGravityWell, 16); // ~60fps
+		return () => clearInterval(interval);
 	});
 </script>
 
@@ -157,22 +169,46 @@
 	.gravity-well {
 		position: fixed;
 		pointer-events: none;
-		border-radius: 50%;
 		transform: translate(-50%, -50%);
-		background: radial-gradient(
-			circle,
-			rgba(255, 255, 255, 0.3) 0%,
-			rgba(255, 255, 255, 0.1) 40%,
-			transparent 70%
-		);
-		border: 1px solid rgba(255, 255, 255, 0.2);
-		animation: pulse 0.5s ease-out infinite;
 		z-index: 10;
+		/* Comet shape: elongated with tail */
+		border-radius: 50% 50% 50% 80% / 50% 50% 80% 50%;
+		background: radial-gradient(
+			ellipse 60% 80% at 40% 40%,
+			rgba(120, 120, 120, 0.4) 0%,
+			rgba(80, 80, 80, 0.25) 30%,
+			rgba(40, 40, 40, 0.1) 60%,
+			transparent 100%
+		);
+		border: 1px solid rgba(100, 100, 100, 0.3);
+		box-shadow:
+			0 0 20px rgba(80, 80, 80, 0.2),
+			inset 0 0 10px rgba(150, 150, 150, 0.1);
+		animation: cometPulse 0.6s ease-out infinite;
 	}
 
-	@keyframes pulse {
-		0%, 100% { opacity: 0.8; }
-		50% { opacity: 0.4; }
+	/* Comet tail pseudo-element */
+	.gravity-well::after {
+		content: '';
+		position: absolute;
+		top: 60%;
+		left: 60%;
+		width: 150%;
+		height: 40%;
+		background: linear-gradient(
+			135deg,
+			rgba(100, 100, 100, 0.2) 0%,
+			rgba(60, 60, 60, 0.1) 40%,
+			transparent 100%
+		);
+		border-radius: 0 100% 100% 0;
+		transform: rotate(45deg);
+		transform-origin: left center;
+	}
+
+	@keyframes cometPulse {
+		0%, 100% { opacity: 0.9; transform: translate(-50%, -50%) scale(1); }
+		50% { opacity: 0.6; transform: translate(-50%, -50%) scale(0.98); }
 	}
 
 	.hint {
@@ -233,11 +269,24 @@
 
 	:global([data-theme='light']) .gravity-well {
 		background: radial-gradient(
-			circle,
-			rgba(0, 0, 0, 0.2) 0%,
-			rgba(0, 0, 0, 0.08) 40%,
-			transparent 70%
+			ellipse 60% 80% at 40% 40%,
+			rgba(80, 80, 80, 0.35) 0%,
+			rgba(60, 60, 60, 0.2) 30%,
+			rgba(40, 40, 40, 0.08) 60%,
+			transparent 100%
 		);
-		border-color: rgba(0, 0, 0, 0.15);
+		border-color: rgba(80, 80, 80, 0.25);
+		box-shadow:
+			0 0 20px rgba(60, 60, 60, 0.15),
+			inset 0 0 10px rgba(100, 100, 100, 0.08);
+	}
+
+	:global([data-theme='light']) .gravity-well::after {
+		background: linear-gradient(
+			135deg,
+			rgba(80, 80, 80, 0.15) 0%,
+			rgba(50, 50, 50, 0.08) 40%,
+			transparent 100%
+		);
 	}
 </style>

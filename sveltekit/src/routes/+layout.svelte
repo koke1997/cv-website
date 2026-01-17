@@ -30,6 +30,7 @@
 		}
 		return pathname || '/';
 	});
+
 </script>
 
 <svelte:head>

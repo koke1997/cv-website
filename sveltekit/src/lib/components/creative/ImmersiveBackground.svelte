@@ -105,18 +105,6 @@
 	let opacityMultiplier = $state(2.5);
 	let showOpacitySlider = $state(false);
 
-	// Mouse trail state
-	interface TrailPoint {
-		x: number;
-		y: number;
-		age: number;
-	}
-	let mouseTrail: TrailPoint[] = [];
-	const TRAIL_MAX_LENGTH = 50;
-	const TRAIL_MAX_AGE = 1.5; // seconds
-	let lastMouseX = 0.5;
-	let lastMouseY = 0.5;
-
 	// Explosion effects
 	interface Explosion {
 		x: number;
@@ -2273,73 +2261,22 @@
 	}
 
 	// ============================================
-	// MOUSE TRAIL DRAWING
+	// SUBTLE MOUSE GLOW (creative page only)
 	// ============================================
-	function updateMouseTrail() {
-		// Add new point if mouse moved
+	function drawMouseGlow(ctx: CanvasRenderingContext2D) {
+		if (currentRoute !== '/creative') return;
+
 		const mx = mouseX * width;
 		const my = mouseY * height;
-		const dx = mx - lastMouseX * width;
-		const dy = my - lastMouseY * height;
-		const dist = Math.sqrt(dx * dx + dy * dy);
 
-		if (dist > 3) { // Only add if moved enough
-			mouseTrail.unshift({ x: mx, y: my, age: 0 });
-			lastMouseX = mouseX;
-			lastMouseY = mouseY;
-		}
+		// Soft gray radial glow
+		const gradient = ctx.createRadialGradient(mx, my, 0, mx, my, 120);
+		gradient.addColorStop(0, 'rgba(120, 115, 105, 0.08)');
+		gradient.addColorStop(0.4, 'rgba(100, 95, 85, 0.04)');
+		gradient.addColorStop(1, 'rgba(80, 75, 65, 0)');
 
-		// Age and remove old points
-		const dt = 0.016; // Approx frame time
-		for (let i = mouseTrail.length - 1; i >= 0; i--) {
-			mouseTrail[i].age += dt;
-			if (mouseTrail[i].age > TRAIL_MAX_AGE) {
-				mouseTrail.splice(i, 1);
-			}
-		}
-
-		// Cap length
-		if (mouseTrail.length > TRAIL_MAX_LENGTH) {
-			mouseTrail.length = TRAIL_MAX_LENGTH;
-		}
-	}
-
-	function drawMouseTrail(ctx: CanvasRenderingContext2D) {
-		if (mouseTrail.length < 2) return;
-
-		ctx.save();
-		ctx.lineCap = 'round';
-		ctx.lineJoin = 'round';
-
-		// Draw glow trail
-		for (let i = 1; i < mouseTrail.length; i++) {
-			const p0 = mouseTrail[i - 1];
-			const p1 = mouseTrail[i];
-
-			const alpha0 = 1 - (p0.age / TRAIL_MAX_AGE);
-			const alpha1 = 1 - (p1.age / TRAIL_MAX_AGE);
-			const avgAlpha = (alpha0 + alpha1) / 2;
-
-			// Thicker at the head, thinner at tail
-			const thickness = (1 - i / mouseTrail.length) * 8 + 2;
-
-			// Gradient from warm white to subtle color
-			const hue = (time * 30 + i * 3) % 360;
-
-			ctx.beginPath();
-			ctx.moveTo(p0.x, p0.y);
-			ctx.lineTo(p1.x, p1.y);
-			ctx.strokeStyle = `hsla(${hue}, 50%, 70%, ${avgAlpha * 0.6})`;
-			ctx.lineWidth = thickness;
-			ctx.stroke();
-
-			// Inner bright core
-			ctx.strokeStyle = `hsla(${hue}, 30%, 90%, ${avgAlpha * 0.8})`;
-			ctx.lineWidth = thickness * 0.4;
-			ctx.stroke();
-		}
-
-		ctx.restore();
+		ctx.fillStyle = gradient;
+		ctx.fillRect(mx - 120, my - 120, 240, 240);
 	}
 
 	// ============================================
@@ -2440,8 +2377,8 @@
 		// Draw current style
 		drawStyle(ctxCurrent, currentStyle, particles, blobs, artSeed);
 
-		// Draw interactive overlays (mouse trail, explosions)
-		drawMouseTrail(ctxCurrent);
+		// Draw interactive overlays
+		drawMouseGlow(ctxCurrent);
 		drawExplosions(ctxCurrent);
 	}
 
@@ -2457,7 +2394,6 @@
 		time += 0.016;
 
 		// Update interactive systems
-		updateMouseTrail();
 		updateExplosions();
 
 		draw();
