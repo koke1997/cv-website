@@ -4,7 +4,6 @@
 [![GitHub release](https://img.shields.io/github/v/release/koke1997/cv-website)](https://github.com/koke1997/cv-website/releases)
 [![GitHub Package](https://img.shields.io/github/v/release/koke1997/cv-website?label=npm)](https://github.com/koke1997/cv-website/packages)
 [![Deploy](https://github.com/koke1997/cv-website/actions/workflows/deploy.yml/badge.svg)](https://github.com/koke1997/cv-website/actions/workflows/deploy.yml)
-[![pages-build-deployment](https://github.com/koke1997/cv-website/actions/workflows/pages/pages-build-deployment/badge.svg)](https://github.com/koke1997/cv-website/actions/workflows/pages/pages-build-deployment)
 
 Professional CV website built with RenderCV and SvelteKit, deployed on GitHub Pages.
 
